@@ -18,7 +18,7 @@ class FakeWebSocketServer:
 @pytest.fixture
 def websocket_server(request):
     server = FakeWebSocketServer()
-    with patch('glue_openspace.viewer.create_connection',
+    with patch('glue_openspace_thesis.viewer.create_connection',
                return_value=server):
         yield server
 
