@@ -21,7 +21,7 @@ LOGO = os.path.abspath(os.path.join(os.path.dirname(__file__), 'logo.png'))
 
 class OpenSpaceDataViewer(DataViewer):
 
-    LABEL = 'OpenSpace Viewer'
+    LABEL = 'OpenSpace Viewer Thesis'
     _state_cls = OpenSpaceViewerState
     _options_cls = OpenSpaceViewerStateWidget
     _layer_style_widget_cls = OpenSpaceLayerStateWidget
