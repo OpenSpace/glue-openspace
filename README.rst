@@ -5,4 +5,4 @@ Experimental plugin developed as part of the *Astrographics: Interactive Data-Dr
 
 To try it out::
 
-    pip install git+https://github.com/glue-viz/glue-openspace.git
+    pip install git+https://github.com/aniisabihi/glue-openspace.git
