@@ -1,4 +1,5 @@
 import tempfile
+import os
 
 from astropy import units as u
 from astropy.coordinates import SkyCoord
@@ -11,17 +12,17 @@ to_rgb = ColorConverter().to_rgb
 
 def generate_cmap_table(color):
 
-    tmpfile = tempfile.mktemp(suffix='.cmap')
+    #tmpfile = tempfile.mktemp(suffix='.cmap')
 
     r, g, b = to_rgb(color)
 
-    with open(tmpfile, 'w') as f:
+    with open('tmpfile', 'w') as f:
 
         f.write('256\n')
         for i in range(256):
             f.write('{0:8.6f} {1:8.6f} {2:8.6f} {3:8.6f}\n'.format(r, g, b, 1))
 
-    return tmpfile
+    #return tmpfile
 
 
 def data_to_speck(data, lon_att, lat_att, alt_att=None, frame=None, alt_unit=None):
@@ -61,23 +62,29 @@ def data_to_speck(data, lon_att, lat_att, alt_att=None, frame=None, alt_unit=Non
     # Create speck table
 
     #tmpfile = tempfile.mktemp(suffix='.speck')
-    tmpfile = tempfile.mktemp(suffix='.bin')
+    tmpfile, output = tempfile.mkstemp(suffix='.bin')
     
-    with open(tmpfile, 'wb') as f:
+    with os.fdopen(tmpfile, "wb") as f:
 
         #f.write('datavar 0 colorb_v\n')
         #f.write('datavar 1 lum\n')
         #f.write('datavar 2 absmag\n')
         #f.write('datavar 3 appmag\n')
 
-        f.write("datavar 0 colorb_v\n".encode('utf8'))
+        f.write(bytes('datavar 0 colorb_v\n'))
+        f.write(bytes('datavar 1 lum\n'))
+        f.write(bytes('datavar 2 absmag\n'))
+        f.write(bytes('datavar 3 appmag\n'))
+
+        f.write('datavar 0 colorb_v\n'.encode('utf8'))
         f.write("datavar 1 lum\n".encode('utf8'))
         f.write("datavar 2 absmag\n".encode('utf8'))
         f.write("datavar 3 appmag\n".encode('utf8'))
 
         for i in range(len(x)):
             #f.write('{0:10.5f} {1:10.5f} {2:10.5f} {3:10.5f} {4:10.5f} {5:10.5f} {6:10.5f}\n'.format(x[i], y[i], z[i], 0., 100., 0., 0.))
-            f.write("{0:10.5f} {1:10.5f} {2:10.5f} {3:10.5f} {4:10.5f} {5:10.5f} {6:10.5f}\n".format(x[i], y[i], z[i], 0., 100., 0., 0.).encode('utf8'))
+            #f.write("{0:10.5f} {1:10.5f} {2:10.5f} {3:10.5f} {4:10.5f} {5:10.5f} {6:10.5f}\n".format(x[i], y[i], z[i], 0., 100., 0., 0.).encode('utf8'))
+            f.write(bytes("{0:10.5f} {1:10.5f} {2:10.5f} {3:10.5f} {4:10.5f} {5:10.5f} {6:10.5f}\n".format(x[i], y[i], z[i], 0., 100., 0., 0.)))
 
     return tmpfile
 
