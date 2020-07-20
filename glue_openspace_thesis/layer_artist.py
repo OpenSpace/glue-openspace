@@ -147,7 +147,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                         "Renderable": {"Type": "RenderablePointsCloud",
                                                 "File": tmpfile,
                                                 "Color": colors,
-                                                 "Size": 400 + (5 * self.state.size * self.state.size_scaling)},
+                                                "Size": (5 * self.state.size * self.state.size_scaling)},
                         "GUI": {
                             "Path": "/glue-viz",
                             "Name": self._display_name
