@@ -37,15 +37,9 @@ class OpenSpaceLayerStateWidget(QtWidgets.QWidget):
         self.state.add_callback('color_mode', self._update_color_mode)
         self.state.add_callback('size_mode', self._update_size_mode)
 
-        # self.ui.button_center.clicked.connect(layer_artist.center)
-
         self._viewer_state = layer_artist._viewer_state
-        # self._viewer_state.add_callback('mode', self._on_mode_changed)
 
         self.ui.button_center.setVisible(False)
-
-    # def _on_mode_changed(self, *args):
-    #     self.ui.button_center.setVisible(self._viewer_state.mode == 'Sky')
 
     def _update_size_mode(self, *args):
 

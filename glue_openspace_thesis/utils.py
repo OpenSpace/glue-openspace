@@ -60,7 +60,6 @@ def data_to_speck(data, lon_att, lat_att, alt_att=None, frame=None, alt_unit=Non
         z = z.to_value(u.pc)
 
     # Create speck table
-
     tmpfile = tempfile.mktemp(suffix='.speck')
     #tmpfile, output = tempfile.mkstemp(suffix='.bin')
     
@@ -88,6 +87,7 @@ def data_to_speck(data, lon_att, lat_att, alt_att=None, frame=None, alt_unit=Non
             #f.write(bytes("{0:10.5f} {1:10.5f} {2:10.5f} {3:10.5f} {4:10.5f} {5:10.5f} {6:10.5f}\n".format(x[i], y[i], z[i], 0., 100., 0., 0.)))
 
     return tmpfile
+
 
 def generate_openspace_message(script_function, script_arguments):
     message = {"topic":4,

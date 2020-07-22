@@ -18,19 +18,17 @@ from .utils import data_to_speck, generate_cmap_table, generate_openspace_messag
 from matplotlib.colors import ColorConverter
 to_rgb = ColorConverter().to_rgb
 
-
 __all__ = ['OpenSpaceLayerArtist']
 
 #TODO move this to later
 #TODO make this image selctable by user 
 TEXTURE_ORIG = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
 TEXTURE = tempfile.mktemp(suffix='.png')
-shutil.copy(TEXTURE_ORIG, TEXTURE);
+shutil.copy(TEXTURE_ORIG, TEXTURE)
 
 #TODO shouldn't need this if we can add/remove assets in quicker succession.
 # Time to wait after sending websocket message
 WAIT_TIME = 0.05
-
 
 
 class OpenSpaceLayerArtist(LayerArtist):
@@ -52,14 +50,6 @@ class OpenSpaceLayerArtist(LayerArtist):
     @property
     def websocket(self):
         return self._viewer.websocket
-
-    # def _on_visible_change(self, value=None):
-    #     self.artist.set_visible(self.state.visible)
-    #     self.redraw()
-    #
-    # def _on_zorder_change(self, value=None):
-    #     self.artist.set_zorder(self.state.zorder)
-    #     self.redraw()
 
     def _on_attribute_change(self, *args, **kwargs):
 
@@ -131,13 +121,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         #TODO - Different types could be available here, such as RenderableStars, RenderableGrid, etc
         arguments = [{"Identifier": self._uuid,
                         "Parent": "Root",
-                        # "Renderable": {"Type": "RenderableStars",
-                        #                        "File": tmpfile,
-                        #                        "Texture": TEXTURE,
-                        #                        "MagnitudeExponent": magexp,
-                        #                        "ColorMap": cmap_table,
-                        #                        "SizeComposition": "Distance Modulus",
-                        #                        "RenderMethod": "Texture Based"},
                         #"Renderable": {"Type": "RenderableBillboardsCloud",
                         #                        "File": tmpfile,
                         #                        "Texture": TEXTURE,
@@ -179,5 +162,4 @@ class OpenSpaceLayerArtist(LayerArtist):
     def update(self):
         if self.websocket is None:
             return
-        # self._on_fill_change()
         self._on_attribute_change(force=True)
