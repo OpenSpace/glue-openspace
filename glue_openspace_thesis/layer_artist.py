@@ -5,7 +5,6 @@ import time
 import shutil
 import tempfile
 
-
 import numpy as np
 from astropy import units as u
 from glue.core import Data, Subset
@@ -13,26 +12,26 @@ from glue.core import Data, Subset
 from glue.viewers.common.layer_artist import LayerArtist
 
 from .layer_state import OpenSpaceLayerState
-from .utils import data_to_speck, generate_cmap_table, generate_openspace_message
+from .utils import data_to_speck, generate_color_map_table, generate_openspace_message
 
 from matplotlib.colors import ColorConverter
+
 to_rgb = ColorConverter().to_rgb
 
 __all__ = ['OpenSpaceLayerArtist']
 
-#TODO move this to later
-#TODO make this image selctable by user 
+# TODO move this to later
+# TODO make this image selectable by user
 TEXTURE_ORIG = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
 TEXTURE = tempfile.mktemp(suffix='.png')
 shutil.copy(TEXTURE_ORIG, TEXTURE)
 
-#TODO shouldn't need this if we can add/remove assets in quicker succession.
+# TODO shouldn't need this if we can add/remove assets in quicker succession.
 # Time to wait after sending websocket message
 WAIT_TIME = 0.05
 
 
 class OpenSpaceLayerArtist(LayerArtist):
-
     _layer_state_cls = OpenSpaceLayerState
 
     def __init__(self, viewer, *args, **kwargs):
@@ -65,15 +64,16 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         if len(changed) == 0 and not force:
             return
-        
+
         if not self._uuid is None:
             arguments = []
-            if ("color" in changed):
-                arguments = ['Scene.' + self._uuid +'.Renderable.Color', to_rgb(self.state.color)]
-            elif ("alpha" in changed):
-                arguments = ['Scene.' + self._uuid +'.Renderable.Opacity', self.state.alpha]
+            if "color" in changed:
+                arguments = ['Scene.' + self._uuid + '.Renderable.Color', to_rgb(self.state.color)]
+            elif "alpha" in changed:
+                arguments = ['Scene.' + self._uuid + '.Renderable.Opacity', self.state.alpha]
             elif ("size" in changed) or ("size_scaling" in changed):
-                arguments = ['Scene.' + self._uuid +'.Renderable.ScaleFactor', 400 + (5 * self.state.size * self.state.size_scaling)]
+                arguments = ['Scene.' + self._uuid + '.Renderable.ScaleFactor',
+                             400 + (5 * self.state.size * self.state.size_scaling)]
 
             if arguments:
                 message = generate_openspace_message("openspace.setPropertyValueSingle", arguments)
@@ -83,17 +83,16 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         self.clear()
 
-
         if not self.state.visible:
             return
 
         try:
-            tmpfile = data_to_speck(self.state.layer,
-                                    self._viewer_state.lon_att,
-                                    self._viewer_state.lat_att,
-                                    alt_att=self._viewer_state.alt_att,
-                                    alt_unit=self._viewer_state.alt_unit,
-                                    frame=self._viewer_state.frame)
+            temporary_file = data_to_speck(self.state.layer,
+                                           self._viewer_state.lon_att,
+                                           self._viewer_state.lat_att,
+                                           alt_att=self._viewer_state.alt_att,
+                                           alt_unit=self._viewer_state.alt_unit,
+                                           frame=self._viewer_state.frame)
         except Exception as exc:
             print(str(exc))
             return
@@ -107,40 +106,40 @@ class OpenSpaceLayerArtist(LayerArtist):
         else:
             self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
 
-        cmap_table = generate_cmap_table(self.state.color)
+        cmap_table = generate_color_map_table(self.state.color)
 
         # For now, the size of the points in OpenSpace is absolute, so we need to include
         # some scaling based on the largest absolute distance in the data.
-        maxdist = np.nanmax(self.state.layer[self._viewer_state.alt_att]) * u.Unit(self._viewer_state.alt_unit)
-        magexp = 5 + np.log10(maxdist / (1 * u.pc)).value
+        maximum_distance = np.nanmax(self.state.layer[self._viewer_state.alt_att]) * u.Unit(self._viewer_state.alt_unit)
+        magexp = 5 + np.log10(maximum_distance / (1 * u.pc)).value
 
         magexp += np.log10(self.state.size * self.state.size_scaling)
 
-        r,g,b = to_rgb(self.state.color)
-        colors = [r,g,b];
-        #TODO - Different types could be available here, such as RenderableStars, RenderableGrid, etc
+        r, g, b = to_rgb(self.state.color)
+        colors = [r, g, b]
+        # TODO - Different types could be available here, such as RenderableStars, RenderableGrid, etc
         arguments = [{"Identifier": self._uuid,
-                        "Parent": "Root",
-                        #"Renderable": {"Type": "RenderableBillboardsCloud",
-                        #                        "File": tmpfile,
-                        #                        "Texture": TEXTURE,
-                        #                        "Color": colors,
-                        #                        "EnablePixelSizeControl": True,
-                        #                         "ScaleFactor": 400 + (5 * self.state.size * self.state.size_scaling)},
-                        "Renderable": {"Type": "RenderablePointsCloud",
-                                                "Color": colors,
-                                                "File": tmpfile,
-                                                "Size": (5 * self.state.size * self.state.size_scaling)},
-                        "GUI": {
-                            "Path": "/glue-viz",
-                            "Name": self._display_name
-                        }
-                    }]
+                      "Parent": "Root",
+                      # "Renderable": {"Type": "RenderableBillboardsCloud",
+                      #                        "File": temporary_file,
+                      #                        "Texture": TEXTURE,
+                      #                        "Color": colors,
+                      #                        "EnablePixelSizeControl": True,
+                      #                         "ScaleFactor": 400 + (5 * self.state.size * self.state.size_scaling)},
+                      "Renderable": {"Type": "RenderablePointsCloud",
+                                     "Color": colors,
+                                     "File": temporary_file,
+                                     "Size": (5 * self.state.size * self.state.size_scaling)},
+                      "GUI": {
+                          "Path": "/glue-viz",
+                          "Name": self._display_name
+                      }
+                      }]
 
         message = generate_openspace_message("openspace.addSceneGraphNode", arguments)
         self.websocket.send(json.dumps(message).encode('ascii'))
         time.sleep(WAIT_TIME)
-        #TODO send webgui refresh command
+        # TODO send web GUI refresh command
 
     def clear(self):
         if self.websocket is None:
