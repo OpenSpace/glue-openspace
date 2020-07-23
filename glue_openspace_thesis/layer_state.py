@@ -1,8 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-from glue.external.echo import (CallbackProperty,
-                                SelectionCallbackProperty, delay_callback,
-                                keep_in_sync)
+from glue.external.echo import (CallbackProperty, SelectionCallbackProperty, keep_in_sync)
 from glue.viewers.common.state import LayerState
 
 __all__ = ['OpenSpaceLayerState']
@@ -19,7 +17,6 @@ class OpenSpaceLayerState(LayerState):
     size_scaling = CallbackProperty(1)
 
     color_mode = SelectionCallbackProperty(default_index=0)
-    cmap_mode = color_mode
 
     def __init__(self, layer=None, **kwargs):
 

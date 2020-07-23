@@ -2,22 +2,20 @@ from __future__ import absolute_import, division, print_function
 
 from astropy import units as u
 
-from glue.external.echo import (CallbackProperty, ListCallbackProperty,
-                                SelectionCallbackProperty)
+from glue.external.echo import (ListCallbackProperty, SelectionCallbackProperty)
 from glue.core.data_combo_helper import ComponentIDComboHelper
 from glue.viewers.common.state import ViewerState
 
 MODES = ['Sky']
 MODES_BODIES = []
 
-ALT_UNITS = [u.m, u.km, u.AU, u.lyr, u.pc, u.kpc, u.Mpc,
-             u.imperial.ft, u.imperial.inch, u.imperial.mi]
+ALTERNATIVE_UNITS = [u.m, u.km, u.AU, u.lyr, u.pc, u.kpc, u.Mpc, u.imperial.ft, u.imperial.inch, u.imperial.mi]
 
-ALT_TYPES = ['Distance']
+ALTERNATIVE_TYPES = ['Distance']
 
 CELESTIAL_FRAMES = ['ICRS', 'FK5', 'FK4', 'Galactic']
 
-__all__ = ['OpenSpaceViewerState']
+__all__ = ['OpenSpaceViewerState', 'MODES_BODIES']
 
 
 class OpenSpaceViewerState(ViewerState):
@@ -39,8 +37,8 @@ class OpenSpaceViewerState(ViewerState):
 
         OpenSpaceViewerState.mode.set_choices(self, MODES)
         OpenSpaceViewerState.frame.set_choices(self, CELESTIAL_FRAMES)
-        OpenSpaceViewerState.alt_unit.set_choices(self, [str(x) for x in ALT_UNITS])
-        OpenSpaceViewerState.alt_type.set_choices(self, ALT_TYPES)
+        OpenSpaceViewerState.alt_unit.set_choices(self, [str(x) for x in ALTERNATIVE_UNITS])
+        OpenSpaceViewerState.alt_type.set_choices(self, ALTERNATIVE_TYPES)
 
         self.lon_att_helper = ComponentIDComboHelper(self, 'lon_att',
                                                      numeric=True,

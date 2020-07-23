@@ -6,9 +6,8 @@ import shutil
 import tempfile
 
 import numpy as np
-from astropy import units as u
-from glue.core import Data, Subset
 
+from glue.core import Data, Subset
 from glue.viewers.common.layer_artist import LayerArtist
 
 from .layer_state import OpenSpaceLayerState
@@ -20,9 +19,9 @@ to_rgb = ColorConverter().to_rgb
 
 __all__ = ['OpenSpaceLayerArtist']
 
-TEXTURE_ORIG = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
+TEXTURE_ORIGIN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
 TEXTURE = tempfile.mktemp(suffix='.png')
-shutil.copy(TEXTURE_ORIG, TEXTURE)
+shutil.copy(TEXTURE_ORIGIN, TEXTURE)
 
 # Time to wait after sending websocket message
 WAIT_TIME = 0.05
@@ -47,7 +46,7 @@ class OpenSpaceLayerArtist(LayerArtist):
     def websocket(self):
         return self._viewer.websocket
 
-    def _on_attribute_change(self, *args, **kwargs):
+    def _on_attribute_change(self, **kwargs):
 
         force = kwargs.get('force', False)
 
@@ -62,15 +61,15 @@ class OpenSpaceLayerArtist(LayerArtist):
         if len(changed) == 0 and not force:
             return
 
-        if not self._uuid is None:
+        if self._uuid:
             arguments = []
             if "color" in changed:
                 arguments = ['Scene.' + self._uuid + '.Renderable.Color', to_rgb(self.state.color)]
             elif "alpha" in changed:
                 arguments = ['Scene.' + self._uuid + '.Renderable.Opacity', self.state.alpha]
             elif ("size" in changed) or ("size_scaling" in changed):
-                arguments = ['Scene.' + self._uuid + '.Renderable.ScaleFactor',
-                             400 + (5 * self.state.size * self.state.size_scaling)]
+                arguments = ['Scene.' + self._uuid + '.Renderable.Size',
+                             (5 * self.state.size * self.state.size_scaling)]
 
             if arguments:
                 message = generate_openspace_message("openspace.setPropertyValueSingle", arguments)
@@ -87,8 +86,8 @@ class OpenSpaceLayerArtist(LayerArtist):
             temporary_file = data_to_speck(self.state.layer,
                                            self._viewer_state.lon_att,
                                            self._viewer_state.lat_att,
-                                           alt_att=self._viewer_state.alt_att,
-                                           alt_unit=self._viewer_state.alt_unit,
+                                           alternative_attribute=self._viewer_state.alt_att,
+                                           alternative_unit=self._viewer_state.alt_unit,
                                            frame=self._viewer_state.frame)
         except Exception as exc:
             print(str(exc))
@@ -102,8 +101,6 @@ class OpenSpaceLayerArtist(LayerArtist):
             self._display_name = self.state.layer.label
         else:
             self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
-
-        # cmap_table = generate_color_map_table(self.state.color)
 
         r, g, b = to_rgb(self.state.color)
         colors = [r, g, b]
