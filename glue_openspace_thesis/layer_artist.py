@@ -12,7 +12,7 @@ from glue.core import Data, Subset
 from glue.viewers.common.layer_artist import LayerArtist
 
 from .layer_state import OpenSpaceLayerState
-from .utils import data_to_speck, generate_color_map_table, generate_openspace_message
+from .utils import data_to_speck, generate_openspace_message
 
 from matplotlib.colors import ColorConverter
 
@@ -20,13 +20,10 @@ to_rgb = ColorConverter().to_rgb
 
 __all__ = ['OpenSpaceLayerArtist']
 
-# TODO move this to later
-# TODO make this image selectable by user
 TEXTURE_ORIG = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
 TEXTURE = tempfile.mktemp(suffix='.png')
 shutil.copy(TEXTURE_ORIG, TEXTURE)
 
-# TODO shouldn't need this if we can add/remove assets in quicker succession.
 # Time to wait after sending websocket message
 WAIT_TIME = 0.05
 
@@ -106,26 +103,12 @@ class OpenSpaceLayerArtist(LayerArtist):
         else:
             self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
 
-        cmap_table = generate_color_map_table(self.state.color)
-
-        # For now, the size of the points in OpenSpace is absolute, so we need to include
-        # some scaling based on the largest absolute distance in the data.
-        maximum_distance = np.nanmax(self.state.layer[self._viewer_state.alt_att]) * u.Unit(self._viewer_state.alt_unit)
-        magexp = 5 + np.log10(maximum_distance / (1 * u.pc)).value
-
-        magexp += np.log10(self.state.size * self.state.size_scaling)
+        # cmap_table = generate_color_map_table(self.state.color)
 
         r, g, b = to_rgb(self.state.color)
         colors = [r, g, b]
-        # TODO - Different types could be available here, such as RenderableStars, RenderableGrid, etc
         arguments = [{"Identifier": self._uuid,
                       "Parent": "Root",
-                      # "Renderable": {"Type": "RenderableBillboardsCloud",
-                      #                        "File": temporary_file,
-                      #                        "Texture": TEXTURE,
-                      #                        "Color": colors,
-                      #                        "EnablePixelSizeControl": True,
-                      #                         "ScaleFactor": 400 + (5 * self.state.size * self.state.size_scaling)},
                       "Renderable": {"Type": "RenderablePointsCloud",
                                      "Color": colors,
                                      "File": temporary_file,
@@ -139,7 +122,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         message = generate_openspace_message("openspace.addSceneGraphNode", arguments)
         self.websocket.send(json.dumps(message).encode('ascii'))
         time.sleep(WAIT_TIME)
-        # TODO send web GUI refresh command
 
     def clear(self):
         if self.websocket is None:

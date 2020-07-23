@@ -6,24 +6,7 @@ from astropy.coordinates import SkyCoord
 
 from matplotlib.colors import ColorConverter
 
-__all__ = ['generate_color_map_table', 'data_to_speck', 'generate_openspace_message']
-
-to_rgb = ColorConverter().to_rgb
-
-
-def generate_color_map_table(color):
-
-    temporary_file = tempfile.mktemp(suffix='.cmap')
-
-    r, g, b = to_rgb(color)
-
-    with open('temporary_file', 'w') as f:
-
-        f.write('256\n')
-        for i in range(256):
-            f.write('{0:8.6f} {1:8.6f} {2:8.6f} {3:8.6f}\n'.format(r, g, b, 1))
-
-    return temporary_file
+__all__ = ['data_to_speck', 'generate_openspace_message']
 
 
 def data_to_speck(data, lon_att, lat_att, alt_att=None, frame=None, alt_unit=None):
@@ -89,6 +72,6 @@ def generate_openspace_message(script_function, script_arguments):
     message = {"topic": 4,
                "type": "luascript",
                "payload": {"function": script_function,
-                           "arguments":script_arguments,
+                           "arguments": script_arguments,
                            "return": False}}
     return message

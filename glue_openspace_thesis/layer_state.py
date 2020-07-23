@@ -9,12 +9,6 @@ __all__ = ['OpenSpaceLayerState']
 
 
 class OpenSpaceLayerState(LayerState):
-    """
-    A state object for OpenSpace layers.
-
-    This is copied from the WWT layer, and some aspects of this aren't implemented in the
-    OpenSpace plugin yet.
-    """
 
     layer = CallbackProperty()
     color = CallbackProperty()
