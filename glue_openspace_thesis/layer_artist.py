@@ -62,21 +62,19 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         if self._uuid:
-            arguments = []
-            if "color" in changed:
-                arguments = ['Scene.' + self._uuid + '.Renderable.Color', to_rgb(self.state.color)]
-            elif "alpha" in changed:
-                arguments = ['Scene.' + self._uuid + '.Renderable.Opacity', self.state.alpha]
+            argument = []
+            if "alpha" in changed:
+                argument = [self._uuid, self.state.alpha, "alpha"]
+            elif "color" in changed:
+                argument = [self._uuid, to_rgb(self.state.color), "color"]
             elif ("size" in changed) or ("size_scaling" in changed):
-                arguments = ['Scene.' + self._uuid + '.Renderable.Size',
-                             (5 * self.state.size * self.state.size_scaling)]
+                argument = [self._uuid, (5 * self.state.size * self.state.size_scaling), "size"]
 
-            if arguments:
-                message = generate_openspace_message("openspace.setPropertyValueSingle", arguments)
+            if argument:
+                message = generate_openspace_message("openspace.softwareintegration.updateProperties", argument)
                 self.websocket.send(json.dumps(message).encode('ascii'))
                 time.sleep(WAIT_TIME)
-                return
-
+            return
         self.clear()
 
         if not self.state.visible:
@@ -104,19 +102,12 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         r, g, b = to_rgb(self.state.color)
         colors = [r, g, b]
-        arguments = [{"Identifier": self._uuid,
-                      "Parent": "Root",
-                      "Renderable": {"Type": "RenderablePointsCloud",
-                                     "Color": colors,
-                                     "File": temporary_file,
-                                     "Size": (5 * self.state.size * self.state.size_scaling)},
-                      "GUI": {
-                          "Path": "/glue-viz",
-                          "Name": self._display_name
-                      }
-                      }]
+        alpha = self.state.alpha
+        gui_name = self._display_name
+        size = (5 * self.state.size * self.state.size_scaling)
+        arguments = [self._uuid, colors, temporary_file, alpha, size, gui_name]
 
-        message = generate_openspace_message("openspace.addSceneGraphNode", arguments)
+        message = generate_openspace_message("openspace.softwareintegration.addRenderable", arguments)
         self.websocket.send(json.dumps(message).encode('ascii'))
         time.sleep(WAIT_TIME)
 
@@ -125,12 +116,8 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
         if self._uuid is None:
             return
-        message = {"topic": 4,
-                   "type": "luascript",
-                   "payload": {"function": "openspace.removeSceneGraphNode",
-                               "arguments": [self._uuid],
-                               "return": False}}
 
+        message = generate_openspace_message("openspace.softwareintegration.removeRenderable", self._uuid)
         self.websocket.send(json.dumps(message).encode('ascii'))
         self._uuid = None
 
