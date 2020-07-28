@@ -67,8 +67,8 @@ class OpenSpaceLayerArtist(LayerArtist):
                 argument = [self._uuid, self.state.alpha, "alpha"]
             elif "color" in changed:
                 argument = [self._uuid, to_rgb(self.state.color), "color"]
-            elif ("size" in changed) or ("size_scaling" in changed):
-                argument = [self._uuid, (5 * self.state.size * self.state.size_scaling), "size"]
+            elif "size" in changed:
+                argument = [self._uuid, self.state.size, "size"]
 
             if argument:
                 message = generate_openspace_message("openspace.softwareintegration.updateProperties", argument)
@@ -104,7 +104,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         colors = [r, g, b]
         alpha = self.state.alpha
         gui_name = self._display_name
-        size = (5 * self.state.size * self.state.size_scaling)
+        size = self.state.size
         arguments = [self._uuid, colors, temporary_file, alpha, size, gui_name]
 
         message = generate_openspace_message("openspace.softwareintegration.addRenderable", arguments)
@@ -117,7 +117,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         if self._uuid is None:
             return
 
-        message = generate_openspace_message("openspace.softwareintegration.removeRenderable", self._uuid)
+        message = generate_openspace_message("openspace.softwareintegration.removeRenderable", [self._uuid])
         self.websocket.send(json.dumps(message).encode('ascii'))
         self._uuid = None
 
