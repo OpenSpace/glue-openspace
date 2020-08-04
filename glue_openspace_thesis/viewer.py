@@ -1,4 +1,5 @@
 import os
+import socket
 
 from qtpy.QtWidgets import QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QPushButton, QWidget
 from qtpy.QtGui import QImage, QPixmap
@@ -6,8 +7,6 @@ from qtpy.QtCore import Qt
 
 from glue.viewers.common.qt.data_viewer import DataViewer
 from glue.utils.qt import messagebox_on_error
-
-from websocket import create_connection
 
 from .layer_artist import OpenSpaceLayerArtist
 from .viewer_state import OpenSpaceViewerState
@@ -28,7 +27,7 @@ class OpenSpaceDataViewer(DataViewer):
     _data_artist_cls = OpenSpaceLayerArtist
     _subset_artist_cls = OpenSpaceLayerArtist
 
-    websocket = None
+    socket = None
 
     def __init__(self, *args, **kwargs):
         super(OpenSpaceDataViewer, self).__init__(*args, **kwargs)
@@ -38,7 +37,7 @@ class OpenSpaceDataViewer(DataViewer):
         self._logo.setAlignment(Qt.AlignCenter)
 
         self._ip = QLineEdit()
-        self._ip.setText('ws://localhost:4682/websocket')
+        self._ip.setText('http://localhost:4700/')
         self._button = QPushButton('Connect')
         self._button.clicked.connect(self.connect_to_openspace)
 
@@ -53,9 +52,11 @@ class OpenSpaceDataViewer(DataViewer):
 
         self.setCentralWidget(self._main)
 
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+
     @messagebox_on_error('An error occurred when trying to connect to OpenSpace:', sep=' ')
     def connect_to_openspace(self, *args):
-        self.websocket = create_connection(self._ip.text())
+        self.socket = socket.create_connection(('localhost', 4700))
         self._button.setEnabled(False)
         self._button.setText('Connected')
         for layer in self.layers:

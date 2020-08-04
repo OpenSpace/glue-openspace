@@ -1,5 +1,4 @@
 import os
-import json
 import uuid
 import time
 import shutil
@@ -43,14 +42,14 @@ class OpenSpaceLayerArtist(LayerArtist):
         self._display_name = None
 
     @property
-    def websocket(self):
-        return self._viewer.websocket
+    def sock(self):
+        return self._viewer.socket
 
     def _on_attribute_change(self, **kwargs):
 
         force = kwargs.get('force', False)
 
-        if self.websocket is None:
+        if self.sock is None:
             return
 
         if self._viewer_state.lon_att is None or self._viewer_state.lat_att is None:
@@ -71,8 +70,9 @@ class OpenSpaceLayerArtist(LayerArtist):
                 argument = [self._uuid, self.state.size, "size"]
 
             if argument:
-                message = generate_openspace_message("openspace.softwareintegration.updateProperties", argument)
-                self.websocket.send(json.dumps(message).encode('ascii'))
+                # message = generate_openspace_message("openspace.softwareintegration.updateProperties", argument)
+                # self.sock.send(json.dumps(message).encode('ascii'))
+                self.sock.send(b'hi')
                 time.sleep(WAIT_TIME)
             return
         self.clear()
@@ -107,24 +107,26 @@ class OpenSpaceLayerArtist(LayerArtist):
         size = self.state.size
         arguments = [self._uuid, colors, temporary_file, alpha, size, gui_name]
 
-        message = generate_openspace_message("openspace.softwareintegration.addRenderable", arguments)
-        self.websocket.send(json.dumps(message).encode('ascii'))
+        # message = generate_openspace_message("openspace.softwareintegration.addRenderable", arguments)
+        # self.sock.send(json.dumps(message).encode('ascii'))
+
+        self.sock.send(b'hi')
         time.sleep(WAIT_TIME)
 
     def clear(self):
-        if self.websocket is None:
+        if self.sock is None:
             return
         if self._uuid is None:
             return
 
-        message = generate_openspace_message("openspace.softwareintegration.removeRenderable", [self._uuid])
-        self.websocket.send(json.dumps(message).encode('ascii'))
+        # message = generate_openspace_message("openspace.softwareintegration.removeRenderable", [self._uuid])
+        # self.sock.send(json.dumps(message).encode('ascii'))
         self._uuid = None
 
         # Wait for a short time to avoid sending too many messages in quick succession
         time.sleep(WAIT_TIME * 10)
 
     def update(self):
-        if self.websocket is None:
+        if self.sock is None:
             return
         self._on_attribute_change(force=True)
