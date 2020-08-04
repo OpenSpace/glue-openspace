@@ -61,18 +61,40 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         if self._uuid:
-            argument = []
+            message = ""
+            renderable = self._uuid
+            length_of_renderable = str(len(self._uuid))
             if "alpha" in changed:
-                argument = [self._uuid, self.state.alpha, "alpha"]
+                # PLACEHOLDER CODE - DOESN'T WORK #
+                message_type = "2"
+                identifier = str(to_rgb(self.state.alpha))
+                length_of_identifier = str(len(identifier))
+                name = "alpha"
+                length_of_name = str(len(name))
+                message = message_type + "1" + length_of_renderable + length_of_identifier + length_of_name + renderable + identifier + name
+                # PLACEHOLDER CODE - DOESN'T WORK #
+                
             elif "color" in changed:
-                argument = [self._uuid, to_rgb(self.state.color), "color"]
-            elif "size" in changed:
-                argument = [self._uuid, self.state.size, "size"]
+                message_type = "1"
+                identifier = str(to_rgb(self.state.color))
+                length_of_identifier = str(len(identifier))
+                name = "color"
+                length_of_name = str(len(name))
+                message = message_type + length_of_renderable + length_of_identifier + length_of_name + renderable + identifier + name
 
-            if argument:
+            elif "size" in changed:
+                # PLACEHOLDER CODE - DOESN'T WORK #
+                message_type = "2"
+                identifier = str(to_rgb(self.state.size))
+                length_of_identifier = str(len(identifier))
+                name = "size"
+                length_of_name = str(len(name))
+                message = message_type + "1" + length_of_renderable + length_of_identifier + length_of_name + renderable + identifier + name
+                # PLACEHOLDER CODE - DOESN'T WORK #
+
+            if message:
                 # message = generate_openspace_message("openspace.softwareintegration.updateProperties", argument)
-                # self.sock.send(json.dumps(message).encode('ascii'))
-                self.sock.send(b'hi')
+                self.sock.send(bytes(message, 'utf-8'))
                 time.sleep(WAIT_TIME)
             return
         self.clear()
@@ -110,7 +132,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         # message = generate_openspace_message("openspace.softwareintegration.addRenderable", arguments)
         # self.sock.send(json.dumps(message).encode('ascii'))
 
-        self.sock.send(b'hi')
+        self.sock.send(b'7Hi Glue')
         time.sleep(WAIT_TIME)
 
     def clear(self):
