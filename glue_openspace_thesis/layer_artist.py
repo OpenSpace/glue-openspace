@@ -3,6 +3,7 @@ import uuid
 import time
 import shutil
 import tempfile
+import logging
 
 import numpy as np
 
@@ -24,6 +25,8 @@ shutil.copy(TEXTURE_ORIGIN, TEXTURE)
 
 # Time to wait after sending websocket message
 WAIT_TIME = 0.05
+
+protocol_version = "1"
 
 
 class OpenSpaceLayerArtist(LayerArtist):
@@ -61,39 +64,35 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         if self._uuid:
-            message = ""
-            renderable = self._uuid
-            length_of_renderable = str(len(self._uuid))
+            message_type = ""
+            subject = ""
+            length_of_subject = ""
+            identifier = self._uuid
+            length_of_identifier = str(len(identifier))
             if "alpha" in changed:
-                # PLACEHOLDER CODE - DOESN'T WORK #
-                message_type = "2"
-                identifier = str(to_rgb(self.state.alpha))
-                length_of_identifier = str(len(identifier))
-                name = "alpha"
-                length_of_name = str(len(name))
-                message = message_type + "1" + length_of_renderable + length_of_identifier + length_of_name + renderable + identifier + name
-                # PLACEHOLDER CODE - DOESN'T WORK #
+                message_type = "opac"
+                value = str(round(self.state.alpha, 4))
+                length_of_value = str(len(value))
+                subject = length_of_identifier + identifier + length_of_value + value
+                length_of_subject = str(format(len(subject), "04"))
                 
             elif "color" in changed:
-                message_type = "1"
-                identifier = str(to_rgb(self.state.color))
-                length_of_identifier = str(len(identifier))
-                name = "color"
-                length_of_name = str(len(name))
-                message = message_type + length_of_renderable + length_of_identifier + length_of_name + renderable + identifier + name
+                message_type = "colo"
+                value = str(to_rgb(self.state.color))
+                length_of_value = str(len(value))
+                subject = length_of_identifier + identifier + length_of_value + value
+                length_of_subject = str(format(len(subject), "04"))
 
             elif "size" in changed:
-                # PLACEHOLDER CODE - DOESN'T WORK #
-                message_type = "2"
-                identifier = str(to_rgb(self.state.size))
-                length_of_identifier = str(len(identifier))
-                name = "size"
-                length_of_name = str(len(name))
-                message = message_type + "1" + length_of_renderable + length_of_identifier + length_of_name + renderable + identifier + name
-                # PLACEHOLDER CODE - DOESN'T WORK #
+                message_type = "size"
+                value = str(self.state.size)
+                length_of_value = str(len(value))
+                subject = length_of_identifier + identifier + length_of_value + value
+                length_of_subject = str(format(len(subject), "04"))
 
-            if message:
+            if subject:
                 # message = generate_openspace_message("openspace.softwareintegration.updateProperties", argument)
+                message = protocol_version + message_type + length_of_subject + subject
                 self.sock.send(bytes(message, 'utf-8'))
                 time.sleep(WAIT_TIME)
             return
@@ -122,17 +121,25 @@ class OpenSpaceLayerArtist(LayerArtist):
         else:
             self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
 
-        r, g, b = to_rgb(self.state.color)
-        colors = [r, g, b]
-        alpha = self.state.alpha
+        message_type = "addS"
+        length_of_file_path = str(len(temporary_file))
+        identifier = self._uuid
+        length_of_identifier = str(len(identifier))
+        color = str(to_rgb(self.state.color))
+        length_of_color = str(len(color))
+        opacity = str(round(self.state.alpha, 4))
+        length_of_opacity = str(len(opacity))
         gui_name = self._display_name
-        size = self.state.size
-        arguments = [self._uuid, colors, temporary_file, alpha, size, gui_name]
+        length_of_gui = str(len(gui_name))
+        size = str(self.state.size)
+        length_of_size = str(len(size))
+        subject = length_of_identifier + identifier + length_of_color + color + length_of_file_path + temporary_file + length_of_opacity + opacity + length_of_size + size + length_of_gui + gui_name
+        length_of_subject = str(format(len(subject), "04"))
 
         # message = generate_openspace_message("openspace.softwareintegration.addRenderable", arguments)
-        # self.sock.send(json.dumps(message).encode('ascii'))
 
-        self.sock.send(b'7Hi Glue')
+        message = protocol_version + message_type + length_of_subject + subject
+        self.sock.send(bytes(message, 'utf-8'))
         time.sleep(WAIT_TIME)
 
     def clear(self):
@@ -141,8 +148,13 @@ class OpenSpaceLayerArtist(LayerArtist):
         if self._uuid is None:
             return
 
+        message_type = "delS"
+        identifier = self._uuid
+        length_of_identifier = str(len(identifier))
+
         # message = generate_openspace_message("openspace.softwareintegration.removeRenderable", [self._uuid])
-        # self.sock.send(json.dumps(message).encode('ascii'))
+        message = protocol_version + message_type + length_of_identifier + identifier
+        self.sock.send(bytes(message, 'utf-8'))
         self._uuid = None
 
         # Wait for a short time to avoid sending too many messages in quick succession
