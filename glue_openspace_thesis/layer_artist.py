@@ -3,7 +3,6 @@ import uuid
 import time
 import shutil
 import tempfile
-import logging
 
 import numpy as np
 
@@ -11,7 +10,7 @@ from glue.core import Data, Subset
 from glue.viewers.common.layer_artist import LayerArtist
 
 from .layer_state import OpenSpaceLayerState
-from .utils import data_to_speck, generate_openspace_message
+from .utils import data_to_speck
 
 from matplotlib.colors import ColorConverter
 
@@ -70,21 +69,21 @@ class OpenSpaceLayerArtist(LayerArtist):
             identifier = self._uuid
             length_of_identifier = str(len(identifier))
             if "alpha" in changed:
-                message_type = "opac"
+                message_type = "UPOP"
                 value = str(round(self.state.alpha, 4))
                 length_of_value = str(len(value))
                 subject = length_of_identifier + identifier + length_of_value + value
                 length_of_subject = str(format(len(subject), "04"))
                 
             elif "color" in changed:
-                message_type = "colo"
+                message_type = "UPCO"
                 value = str(to_rgb(self.state.color))
                 length_of_value = str(len(value))
                 subject = length_of_identifier + identifier + length_of_value + value
                 length_of_subject = str(format(len(subject), "04"))
 
             elif "size" in changed:
-                message_type = "size"
+                message_type = "UPSI"
                 value = str(self.state.size)
                 length_of_value = str(len(value))
                 subject = length_of_identifier + identifier + length_of_value + value
@@ -121,7 +120,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         else:
             self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
 
-        message_type = "addS"
+        message_type = "ASGN"
         length_of_file_path = str(len(temporary_file))
         identifier = self._uuid
         length_of_identifier = str(len(identifier))
@@ -148,7 +147,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         if self._uuid is None:
             return
 
-        message_type = "delS"
+        message_type = "RSGN"
         identifier = self._uuid
         length_of_identifier = str(len(identifier))
 
