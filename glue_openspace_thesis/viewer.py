@@ -8,7 +8,7 @@ from qtpy.QtCore import Qt
 from glue.viewers.common.qt.data_viewer import DataViewer
 from glue.utils.qt import messagebox_on_error
 
-from .layer_artist import OpenSpaceLayerArtist
+from .layer_artist import OpenSpaceLayerArtist, protocol_version
 from .viewer_state import OpenSpaceViewerState
 from .layer_state_widget import OpenSpaceLayerStateWidget
 from .viewer_state_widget import OpenSpaceViewerStateWidget
@@ -61,6 +61,12 @@ class OpenSpaceDataViewer(DataViewer):
         self._button.setText('Connected')
         for layer in self.layers:
             layer.update()
+
+        message_type = "CONN"
+        name = "Glue-Viz"
+        length_of_name = str(format(len(name), "04"))
+        message = protocol_version + message_type + length_of_name + name
+        self.socket.send(bytes(message, 'utf-8'))
 
     def get_layer_artist(self, cls, layer=None, layer_state=None):
         return cls(self, self.state, layer=layer, layer_state=layer_state)

@@ -16,7 +16,7 @@ from matplotlib.colors import ColorConverter
 
 to_rgb = ColorConverter().to_rgb
 
-__all__ = ['OpenSpaceLayerArtist']
+__all__ = ['OpenSpaceLayerArtist', 'protocol_version']
 
 TEXTURE_ORIGIN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
 TEXTURE = tempfile.mktemp(suffix='.png')
