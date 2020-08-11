@@ -74,7 +74,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 length_of_value = str(len(value))
                 subject = length_of_identifier + identifier + length_of_value + value
                 length_of_subject = str(format(len(subject), "04"))
-                
+
             elif "color" in changed:
                 message_type = "UPCO"
                 value = str(to_rgb(self.state.color))
@@ -94,6 +94,8 @@ class OpenSpaceLayerArtist(LayerArtist):
                 message = protocol_version + message_type + length_of_subject + subject
                 self.sock.send(bytes(message, 'utf-8'))
                 time.sleep(WAIT_TIME)
+
+                self.receive_message()
             return
         self.clear()
 
@@ -158,6 +160,14 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         # Wait for a short time to avoid sending too many messages in quick succession
         time.sleep(WAIT_TIME * 10)
+
+    def receive_message(self):
+        if self.sock is None:
+            print("Socket is none")
+            return
+
+        message_received = self.sock.recv(4096)
+        print('Recieved message from socket: ', message_received.decode('ascii'))
 
     def update(self):
         if self.sock is None:
