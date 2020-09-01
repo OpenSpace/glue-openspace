@@ -10,5 +10,6 @@ To try it out::
     pip install git+https://github.com/aniisabihi/glue-openspace-thesis.git
     
     Requires that the developer's version of OpenSpace is installed from the branch called 'Software Integration'
-    https://github.com/OpenSpace/OpenSpace/tree/thesis/2020/software-integration
+    Guide: http://wiki.openspaceproject.com/docs/developers/
+    Branch: https://github.com/OpenSpace/OpenSpace/tree/thesis/2020/software-integration
     
