@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-from glue.external.echo import (CallbackProperty, SelectionCallbackProperty, keep_in_sync)
+from glue.external.echo import (CallbackProperty, keep_in_sync)
 from glue.viewers.common.state import LayerState
 
 __all__ = ['OpenSpaceLayerState']

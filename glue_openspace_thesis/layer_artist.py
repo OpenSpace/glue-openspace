@@ -90,12 +90,9 @@ class OpenSpaceLayerArtist(LayerArtist):
                 length_of_subject = str(format(len(subject), "04"))
 
             if subject:
-                # message = generate_openspace_message("openspace.softwareintegration.updateProperties", argument)
                 message = protocol_version + message_type + length_of_subject + subject
                 self.sock.send(bytes(message, 'utf-8'))
                 time.sleep(WAIT_TIME)
-
-                self.receive_message()
             return
         self.clear()
 
@@ -137,11 +134,36 @@ class OpenSpaceLayerArtist(LayerArtist):
         subject = length_of_identifier + identifier + length_of_color + color + length_of_file_path + temporary_file + length_of_opacity + opacity + length_of_size + size + length_of_gui + gui_name
         length_of_subject = str(format(len(subject), "04"))
 
-        # message = generate_openspace_message("openspace.softwareintegration.addRenderable", arguments)
-
         message = protocol_version + message_type + length_of_subject + subject
         self.sock.send(bytes(message, 'utf-8'))
         time.sleep(WAIT_TIME)
+
+        if self.receive_message():
+            message_received = self.sock.recv(4096).decode('ascii')
+            message_type = message_received[0:4]
+            offset = 5
+
+            if message_type is 'UPSI':
+                # length_of_identifier = message_received[offset:offset+1]
+                # offset += 2
+                # identifier = message_received[offset:offset+length_of_identifier]
+                # offset += (length_of_identifier+1)
+                length_of_size = message_received[offset]
+                offset += 1
+                size = message_received[offset:offset+length_of_size]
+                self.state.size = int(size)
+
+            if message_type is 'UPOP':
+                length_of_opacity = message_received[offset]
+                offset += 1
+                opacity = message_received[offset:offset+length_of_opacity]
+                self.state.alpha = int(opacity)
+
+            if message_type is 'UPCO':
+                length_of_color = message_received[offset:offset+1]
+                offset += 2
+                color = message_received[offset:offset+length_of_color]
+                self.state.color = int(color)
 
     def clear(self):
         if self.sock is None:
@@ -153,7 +175,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         identifier = self._uuid
         length_of_identifier = str(len(identifier))
 
-        # message = generate_openspace_message("openspace.softwareintegration.removeRenderable", [self._uuid])
         message = protocol_version + message_type + length_of_identifier + identifier
         self.sock.send(bytes(message, 'utf-8'))
         self._uuid = None
@@ -164,10 +185,11 @@ class OpenSpaceLayerArtist(LayerArtist):
     def receive_message(self):
         if self.sock is None:
             print("Socket is none")
-            return
+            return False
 
         message_received = self.sock.recv(4096)
-        print('Recieved message from socket: ', message_received.decode('ascii'))
+        print('Received message from socket: ', message_received.decode('ascii'))
+        return True
 
     def update(self):
         if self.sock is None:

@@ -3,7 +3,7 @@ import tempfile
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
-__all__ = ['data_to_speck', 'generate_openspace_message']
+__all__ = ['data_to_speck']
 
 
 def data_to_speck(data, longitude_attribute, latitude_attribute, alternative_attribute=None,
@@ -52,12 +52,3 @@ def data_to_speck(data, longitude_attribute, latitude_attribute, alternative_att
             f.write('{0:10.5f} {1:10.5f} {2:10.5f} {3:10.5f} {4:10.5f} {5:10.5f} {6:10.5f}\n'.format(x[i], y[i], z[i],
                                                                                                      0., 100., 0., 0.))
     return temporary_file
-
-
-def generate_openspace_message(script_function, script_arguments):
-    message = {"topic": 4,
-               "type": "luascript",
-               "payload": {"function": script_function,
-                           "arguments": script_arguments,
-                           "return": False}}
-    return message
