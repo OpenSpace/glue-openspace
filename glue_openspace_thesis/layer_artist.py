@@ -93,7 +93,6 @@ class OpenSpaceLayerArtist(LayerArtist):
                 message = protocol_version + message_type + length_of_subject + subject
                 self.sock.send(bytes(message, 'utf-8'))
                 time.sleep(WAIT_TIME)
-                # self.receive_message()
             return
         self.clear()
 
@@ -139,12 +138,9 @@ class OpenSpaceLayerArtist(LayerArtist):
         self.sock.send(bytes(message, 'utf-8'))
         time.sleep(WAIT_TIME)
 
-
-        #if self.receive_message():
-        #    message_received = self.sock.recv(4096).decode('ascii')
-        #    print('Received message from socket: ', message_received.decode('ascii'))
-        # message_type = message_received[0:4]
         """
+            message_type = message_received[0:4]
+       
             offset = 5
 
             if message_received is 'O':
@@ -172,6 +168,14 @@ class OpenSpaceLayerArtist(LayerArtist):
                 color = message_received[offset:offset+length_of_color]
                 self.state.color = int(color)"""
 
+    def receive_message(self):
+        if self.sock is None:
+            print("Socket is none")
+            return False
+
+        print("Socket is HERE")
+        return True
+
     def clear(self):
         if self.sock is None:
             return
@@ -181,8 +185,10 @@ class OpenSpaceLayerArtist(LayerArtist):
         message_type = "RSGN"
         identifier = self._uuid
         length_of_identifier = str(len(identifier))
+        subject = length_of_identifier + identifier
+        length_of_subject = str(format(len(subject), "04"))
 
-        message = protocol_version + message_type + length_of_identifier + identifier
+        message = protocol_version + message_type + length_of_subject + subject
         self.sock.send(bytes(message, 'utf-8'))
         self._uuid = None
 
@@ -194,11 +200,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
         self._on_attribute_change(force=True)
 
-    """def receive_message(self):
-         if self.sock is None:
-             print("Socket is none")
-             return False
+        """message_received = self.sock.recv(4096).decode('ascii')
 
-         message_received = self.sock.recv(4096)
-         # print('Received message from socket: ', message_received.decode('ascii'))
-         return True"""
+        if message_received:
+            print('Received message from socket: ', message_received)"""
