@@ -93,6 +93,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 message = protocol_version + message_type + length_of_subject + subject
                 self.sock.send(bytes(message, 'utf-8'))
                 time.sleep(WAIT_TIME)
+                # self.receive_message()
             return
         self.clear()
 
@@ -138,12 +139,18 @@ class OpenSpaceLayerArtist(LayerArtist):
         self.sock.send(bytes(message, 'utf-8'))
         time.sleep(WAIT_TIME)
 
-        if self.receive_message():
-            message_received = self.sock.recv(4096).decode('ascii')
-            message_type = message_received[0:4]
+
+        #if self.receive_message():
+        #    message_received = self.sock.recv(4096).decode('ascii')
+        #    print('Received message from socket: ', message_received.decode('ascii'))
+        # message_type = message_received[0:4]
+        """
             offset = 5
 
-            if message_type is 'UPSI':
+            if message_received is 'O':
+                self.state.size = 30
+
+            elif message_type is 'UPSI':
                 # length_of_identifier = message_received[offset:offset+1]
                 # offset += 2
                 # identifier = message_received[offset:offset+length_of_identifier]
@@ -153,17 +160,17 @@ class OpenSpaceLayerArtist(LayerArtist):
                 size = message_received[offset:offset+length_of_size]
                 self.state.size = int(size)
 
-            if message_type is 'UPOP':
+            elif message_type is 'UPOP':
                 length_of_opacity = message_received[offset]
                 offset += 1
                 opacity = message_received[offset:offset+length_of_opacity]
                 self.state.alpha = int(opacity)
 
-            if message_type is 'UPCO':
+            elif message_type is 'UPCO':
                 length_of_color = message_received[offset:offset+1]
                 offset += 2
                 color = message_received[offset:offset+length_of_color]
-                self.state.color = int(color)
+                self.state.color = int(color)"""
 
     def clear(self):
         if self.sock is None:
@@ -182,16 +189,16 @@ class OpenSpaceLayerArtist(LayerArtist):
         # Wait for a short time to avoid sending too many messages in quick succession
         time.sleep(WAIT_TIME * 10)
 
-    def receive_message(self):
-        if self.sock is None:
-            print("Socket is none")
-            return False
-
-        message_received = self.sock.recv(4096)
-        print('Received message from socket: ', message_received.decode('ascii'))
-        return True
-
     def update(self):
         if self.sock is None:
             return
         self._on_attribute_change(force=True)
+
+    """def receive_message(self):
+         if self.sock is None:
+             print("Socket is none")
+             return False
+
+         message_received = self.sock.recv(4096)
+         # print('Received message from socket: ', message_received.decode('ascii'))
+         return True"""
