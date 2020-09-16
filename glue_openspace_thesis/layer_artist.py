@@ -12,9 +12,12 @@ from glue.viewers.common.layer_artist import LayerArtist
 from .layer_state import OpenSpaceLayerState
 from .utils import data_to_speck
 
+from threading import Thread
 from matplotlib.colors import ColorConverter
+import matplotlib
 
-to_rgb = ColorConverter().to_rgb
+to_rgb = ColorConverter.to_rgb
+to_hex = matplotlib.colors.to_hex
 
 __all__ = ['OpenSpaceLayerArtist', 'protocol_version']
 
@@ -26,6 +29,7 @@ shutil.copy(TEXTURE_ORIGIN, TEXTURE)
 WAIT_TIME = 0.05
 
 protocol_version = "1"
+continueListening = True
 
 
 class OpenSpaceLayerArtist(LayerArtist):
@@ -42,6 +46,10 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         self._uuid = None
         self._display_name = None
+
+        self.threadCommsRx = Thread(target=self.request_listen)
+        self.threadCommsRx.daemon = True
+        self.threadCommsRx.start()
 
     @property
     def sock(self):
@@ -139,7 +147,12 @@ class OpenSpaceLayerArtist(LayerArtist):
         time.sleep(WAIT_TIME)
 
         # TESTING RECEIVING MESSAGE FROM OPENSPACE
-        self.receive_message()
+        # self.receive_message()
+
+    def request_listen(self):
+        while continueListening:
+            self.receive_message()
+            time.sleep(0.01)
 
     def receive_message(self):
         if self.sock is None:
@@ -148,6 +161,26 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         message_received = self.sock.recv(4096).decode('ascii')
         print('Received message from socket: ', message_received)
+
+        message_type = message_received[0:4]
+        offset = 4
+
+        if "UPCO" in message_type:
+            length_of_subject = int(message_received[offset: offset+4])
+            offset += 4
+            subject = message_received[offset:length_of_subject]
+
+            length_of_identifier = int(subject[0:2])
+            print('length_of_identifier: ', length_of_identifier)
+            offset = 2
+            identifier = subject[offset:length_of_identifier+offset]
+            print('identifier: ', identifier)
+            offset += length_of_identifier
+            #length_of_value = int(float(subject[length_of_identifier:offset]))
+            #print('length_of_value: ', length_of_value)
+            #value = subject[offset:length_of_value]
+            #print('value: ', value)
+            # self.state.color = to_hex(value)
 
     def clear(self):
         if self.sock is None:
