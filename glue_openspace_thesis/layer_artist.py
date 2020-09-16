@@ -93,10 +93,6 @@ class OpenSpaceLayerArtist(LayerArtist):
                 message = protocol_version + message_type + length_of_subject + subject
                 self.sock.send(bytes(message, 'utf-8'))
                 time.sleep(WAIT_TIME)
-
-                # TESTING RECEIVING MESSAGE FROM OPENSPACE
-                self.receive_message()
-
             return
         self.clear()
 
@@ -142,13 +138,16 @@ class OpenSpaceLayerArtist(LayerArtist):
         self.sock.send(bytes(message, 'utf-8'))
         time.sleep(WAIT_TIME)
 
+        # TESTING RECEIVING MESSAGE FROM OPENSPACE
+        self.receive_message()
+
     def receive_message(self):
         if self.sock is None:
             print("Socket is none")
             return
 
-        message_received = self.sock.recv(4096)
-        print('Received message from socket: ', message_received.decode('ascii'))
+        message_received = self.sock.recv(4096).decode('ascii')
+        print('Received message from socket: ', message_received)
 
     def clear(self):
         if self.sock is None:
