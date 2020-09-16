@@ -157,9 +157,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         message_type = "RSGN"
-        identifier = self._uuid
-        length_of_identifier = str(len(identifier))
-        subject = length_of_identifier + identifier
+        subject = self._uuid
         length_of_subject = str(format(len(subject), "04"))
 
         message = protocol_version + message_type + length_of_subject + subject
