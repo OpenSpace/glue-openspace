@@ -256,7 +256,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             start = end
             end += length_of_value
             value = float(subject[start:end])
-            
+
             self.state.size = value
 
     def clear(self):
@@ -280,3 +280,4 @@ class OpenSpaceLayerArtist(LayerArtist):
         if self.sock is None:
             return
         self._on_attribute_change(force=True)
+
