@@ -162,25 +162,102 @@ class OpenSpaceLayerArtist(LayerArtist):
         message_received = self.sock.recv(4096).decode('ascii')
         print('Received message from socket: ', message_received)
 
-        message_type = message_received[0:4]
-        offset = 4
+        start = 0
+        end = 4
+        message_type = message_received[start:end]
+        start += 4
+        end += 4
 
         if "UPCO" in message_type:
-            length_of_subject = int(message_received[offset: offset+4])
-            offset += 4
-            subject = message_received[offset:length_of_subject]
+            length_of_subject = int(message_received[start: end])
+            start += 4
+            end += length_of_subject
+            subject = message_received[start:end]
 
-            length_of_identifier = int(subject[0:2])
-            print('length_of_identifier: ', length_of_identifier)
-            offset = 2
-            identifier = subject[offset:length_of_identifier+offset]
-            print('identifier: ', identifier)
-            offset += length_of_identifier
-            #length_of_value = int(float(subject[length_of_identifier:offset]))
-            #print('length_of_value: ', length_of_value)
-            #value = subject[offset:length_of_value]
-            #print('value: ', value)
-            # self.state.color = to_hex(value)
+            # Starting from subject
+            start = 0
+            end = 2
+            length_of_identifier = int(subject[start:end])
+            start += 2
+            end += length_of_identifier
+            identifier = subject[start:end]
+            start += length_of_identifier
+            end += 2
+            length_of_value = int(subject[start:end])
+            start = end
+            end += length_of_value
+            string_value = subject[start+1:end-1]  # don't include ( and )
+            len_string_value = len(string_value)
+
+            x = 0
+            red = ""
+            while string_value[x] is not ",":
+                red += string_value[x]
+                x += 1
+            r = float(red)
+
+            x += 1
+            green = ""
+            while string_value[x] is not ",":
+                green += string_value[x]
+                x += 1
+            g = float(green)
+
+            x += 1
+            blue = ""
+            for y in range(x, len_string_value):
+                blue += string_value[y]
+                y += 1
+            b = float(blue)
+
+            print('red: ', r)
+            print('green: ', g)
+            print('blue: ', b)
+            self.state.color = to_hex([r, g, b])
+
+        if "UPOP" in message_type:
+            length_of_subject = int(message_received[start: end])
+            start += 4
+            end += length_of_subject
+            subject = message_received[start:end]
+
+            # Starting from subject
+            start = 0
+            end = 2
+            length_of_identifier = int(subject[start:end])
+            start += 2
+            end += length_of_identifier
+            identifier = subject[start:end]
+            start += length_of_identifier
+            end += 1
+            length_of_value = int(subject[start:end])
+            start = end
+            end += length_of_value
+            value = float(subject[start:end])
+
+            self.state.alpha = value
+
+        if "UPSI" in message_type:
+            length_of_subject = int(message_received[start: end])
+            start += 4
+            end += length_of_subject
+            subject = message_received[start:end]
+
+            # Starting from subject
+            start = 0
+            end = 2
+            length_of_identifier = int(subject[start:end])
+            start += 2
+            end += length_of_identifier
+            identifier = subject[start:end]
+            start += length_of_identifier
+            end += 1
+            length_of_value = int(subject[start:end])
+            start = end
+            end += length_of_value
+            value = float(subject[start:end])
+            
+            self.state.size = value
 
     def clear(self):
         if self.sock is None:
