@@ -3,6 +3,7 @@ import uuid
 import time
 import shutil
 import tempfile
+import matplotlib
 
 import numpy as np
 
@@ -14,7 +15,6 @@ from .utils import data_to_speck
 
 from threading import Thread
 from matplotlib.colors import ColorConverter
-import matplotlib
 
 to_rgb = ColorConverter.to_rgb
 to_hex = matplotlib.colors.to_hex
@@ -33,6 +33,7 @@ continueListening = True
 
 
 class OpenSpaceLayerArtist(LayerArtist):
+
     _layer_state_cls = OpenSpaceLayerState
 
     def __init__(self, viewer, *args, **kwargs):
@@ -145,9 +146,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         message = protocol_version + message_type + length_of_subject + subject
         self.sock.send(bytes(message, 'utf-8'))
         time.sleep(WAIT_TIME)
-
-        # TESTING RECEIVING MESSAGE FROM OPENSPACE
-        # self.receive_message()
 
     def request_listen(self):
         while continueListening:
