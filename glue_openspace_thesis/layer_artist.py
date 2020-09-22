@@ -98,6 +98,17 @@ class OpenSpaceLayerArtist(LayerArtist):
                 subject = length_of_identifier + identifier + length_of_value + value
                 length_of_subject = str(format(len(subject), "04"))
 
+            elif "visible" in changed:
+                message_type = "TOVI"
+                if self.state.visible is False:
+                    value = "F"
+                elif self.state.visible is True:
+                    value = "T"
+                else:
+                    return
+                subject = length_of_identifier + identifier + value
+                length_of_subject = str(format(len(subject), "04"))
+
             if subject:
                 message = protocol_version + message_type + length_of_subject + subject
                 self.sock.send(bytes(message, 'utf-8'))
@@ -256,6 +267,29 @@ class OpenSpaceLayerArtist(LayerArtist):
             value = float(subject[start:end])
 
             self.state.size = value
+
+        if "TOVI" in message_type:
+            length_of_subject = int(message_received[start: end])
+            start += 4
+            end += length_of_subject
+            subject = message_received[start:end]
+
+            print('Message received: ', subject)
+
+            # Starting from subject
+            start = 0
+            end = 2
+            length_of_identifier = int(subject[start:end])
+            start += 2
+            end += length_of_identifier
+            identifier = subject[start:end]
+            start += length_of_identifier
+            value = subject[start]
+
+            if value is "F":
+                self.state.visible = False
+            else:
+                self.state.visible = True
 
     def clear(self):
         if self.sock is None:
