@@ -156,17 +156,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         message = protocol_version + message_type + length_of_subject + subject
         self.sock.send(bytes(message, 'utf-8'))
-        self.update_openspace_gui()
         time.sleep(WAIT_TIME)
-
-    def update_openspace_gui(self):
-        # Update OpenSpace Web GUI
-        message_type = "UGUI"
-        subject = self._uuid
-        length_of_subject = str(format(len(subject), "04"))
-
-        message = protocol_version + message_type + length_of_subject + subject
-        self.sock.send(bytes(message, 'utf-8'))
 
     def request_listen(self):
         while continueListening:
@@ -313,7 +303,6 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         message = protocol_version + message_type + length_of_subject + subject
         self.sock.send(bytes(message, 'utf-8'))
-        self.update_openspace_gui()
         self._uuid = None
 
         # Wait for a short time to avoid sending too many messages in quick succession
