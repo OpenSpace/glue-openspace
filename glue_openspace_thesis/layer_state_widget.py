@@ -25,12 +25,16 @@ class OpenSpaceLayerStateWidget(QWidget):
         self.layer_artist = layer_artist
         self.layer = layer_artist.layer
 
-        connect_kwargs = {'value_alpha': dict(value_range=(0., 1.))}
+        connect_kwargs = {'value_alpha': dict(value_range=(0., 1.)),
+                          'value_size_scaling': dict(value_range=(0.1, 10), log=True)}
         self._connect = autoconnect_callbacks_to_qt(self.state, self.ui, connect_kwargs)
 
         # Set initial values
         self._update_size_mode()
         self._update_color_mode()
+
+        self.state.add_callback('color_mode', self._update_color_mode)
+        self.state.add_callback('size_mode', self._update_size_mode)
 
         self._viewer_state = layer_artist._viewer_state
 
@@ -38,14 +42,26 @@ class OpenSpaceLayerStateWidget(QWidget):
 
     def _update_size_mode(self, *args):
 
-        self.ui.size_row_2.hide()
-        self.ui.combosel_size_att.hide()
-        self.ui.valuetext_size.show()
+        if self.state.size_mode == "Fixed":
+            self.ui.size_row_2.hide()
+            self.ui.combosel_size_att.hide()
+            self.ui.valuetext_size.show()
+        else:
+            self.ui.valuetext_size.hide()
+            self.ui.combosel_size_att.show()
+            self.ui.size_row_2.show()
 
     def _update_color_mode(self, *args):
 
-        self.ui.color_row_2.hide()
-        self.ui.color_row_3.hide()
-        self.ui.combosel_cmap_att.hide()
-        self.ui.spacer_color_label.show()
-        self.ui.color_color.show()
+        if self.state.color_mode == "Fixed":
+            self.ui.color_row_2.hide()
+            self.ui.color_row_3.hide()
+            self.ui.combosel_cmap_att.hide()
+            self.ui.spacer_color_label.show()
+            self.ui.color_color.show()
+        else:
+            self.ui.color_color.hide()
+            self.ui.combosel_cmap_att.show()
+            self.ui.spacer_color_label.hide()
+            self.ui.color_row_2.show()
+            self.ui.color_row_3.show()

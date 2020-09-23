@@ -6,8 +6,8 @@ import tempfile
 import matplotlib
 
 import numpy as np
-
 from glue.core import Data, Subset
+
 from glue.viewers.common.layer_artist import LayerArtist
 
 from .layer_state import OpenSpaceLayerState
@@ -21,6 +21,8 @@ to_hex = matplotlib.colors.to_hex
 
 __all__ = ['OpenSpaceLayerArtist', 'protocol_version']
 
+# TODO move this to later
+# TODO make this image selectable by user
 TEXTURE_ORIGIN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
 TEXTURE = tempfile.mktemp(suffix='.png')
 shutil.copy(TEXTURE_ORIGIN, TEXTURE)
@@ -56,7 +58,15 @@ class OpenSpaceLayerArtist(LayerArtist):
     def sock(self):
         return self._viewer.socket
 
-    def _on_attribute_change(self, **kwargs):
+    # def _on_visible_change(self, value=None):
+    #     self.artist.set_visible(self.state.visible)
+    #     self.redraw()
+    #
+    # def _on_zorder_change(self, value=None):
+    #     self.artist.set_zorder(self.state.zorder)
+    #     self.redraw()
+
+    def _on_attribute_change(self, *args, **kwargs):
 
         force = kwargs.get('force', False)
 
@@ -114,6 +124,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 self.sock.send(bytes(message, 'utf-8'))
                 time.sleep(WAIT_TIME)
             return
+
         self.clear()
 
         if not self.state.visible:
@@ -161,7 +172,7 @@ class OpenSpaceLayerArtist(LayerArtist):
     def request_listen(self):
         while continueListening:
             self.receive_message()
-            time.sleep(0.01)
+            time.sleep(WAIT_TIME)
 
     def receive_message(self):
         if self.sock is None:
@@ -195,19 +206,21 @@ class OpenSpaceLayerArtist(LayerArtist):
             length_of_value = int(subject[start:end])
             start = end
             end += length_of_value
-            string_value = subject[start+1:end-1]  # don't include ( and )
+
+            # Value is sent in this format: (redValue, greenValue, blueValue)
+            string_value = subject[start+1:end-1]  # Don't include ( and )
             len_string_value = len(string_value)
 
             x = 0
             red = ""
-            while string_value[x] is not ",":  # first value in string
+            while string_value[x] is not ",":  # first value in string is before first ","
                 red += string_value[x]
                 x += 1
             r = float(red)
 
             x += 1
             green = ""
-            while string_value[x] is not ",":  # second value in string
+            while string_value[x] is not ",":  # second value in string is before second ","
                 green += string_value[x]
                 x += 1
             g = float(green)

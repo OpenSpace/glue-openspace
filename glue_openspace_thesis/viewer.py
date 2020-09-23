@@ -1,5 +1,7 @@
 import os
+import time
 import socket
+from abc import ABC
 
 from qtpy.QtWidgets import QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QPushButton, QWidget
 from qtpy.QtGui import QImage, QPixmap
@@ -16,6 +18,9 @@ from .viewer_state_widget import OpenSpaceViewerStateWidget
 __all__ = ['OpenSpaceDataViewer']
 
 LOGO = os.path.abspath(os.path.join(os.path.dirname(__file__), 'logo.png'))
+
+# Time to wait after sending websocket message
+WAIT_TIME = 1
 
 
 class OpenSpaceDataViewer(DataViewer):
@@ -52,13 +57,13 @@ class OpenSpaceDataViewer(DataViewer):
 
         self.setCentralWidget(self._main)
 
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-
     @messagebox_on_error('An error occurred when trying to connect to OpenSpace:', sep=' ')
     def connect_to_openspace(self, *args):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         self.socket = socket.create_connection(('localhost', 4700))
         self._button.setEnabled(False)
         self._button.setText('Connected')
+        time.sleep(WAIT_TIME)
 
         for layer in self.layers:
             layer.update()
