@@ -156,7 +156,17 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         message = protocol_version + message_type + length_of_subject + subject
         self.sock.send(bytes(message, 'utf-8'))
+        self.update_openspace_gui()
         time.sleep(WAIT_TIME)
+
+    def update_openspace_gui(self):
+        # Update OpenSpace Web GUI
+        message_type = "UGUI"
+        subject = self._uuid
+        length_of_subject = str(format(len(subject), "04"))
+
+        message = protocol_version + message_type + length_of_subject + subject
+        self.sock.send(bytes(message, 'utf-8'))
 
     def request_listen(self):
         while continueListening:
@@ -200,21 +210,21 @@ class OpenSpaceLayerArtist(LayerArtist):
 
             x = 0
             red = ""
-            while string_value[x] is not ",":
+            while string_value[x] is not ",":  # first value in string
                 red += string_value[x]
                 x += 1
             r = float(red)
 
             x += 1
             green = ""
-            while string_value[x] is not ",":
+            while string_value[x] is not ",":  # second value in string
                 green += string_value[x]
                 x += 1
             g = float(green)
 
             x += 1
             blue = ""
-            for y in range(x, len_string_value):
+            for y in range(x, len_string_value):  # third value in string
                 blue += string_value[y]
                 y += 1
             b = float(blue)
@@ -303,6 +313,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         message = protocol_version + message_type + length_of_subject + subject
         self.sock.send(bytes(message, 'utf-8'))
+        self.update_openspace_gui()
         self._uuid = None
 
         # Wait for a short time to avoid sending too many messages in quick succession

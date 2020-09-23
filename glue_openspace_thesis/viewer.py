@@ -60,14 +60,14 @@ class OpenSpaceDataViewer(DataViewer):
         self._button.setEnabled(False)
         self._button.setText('Connected')
 
+        for layer in self.layers:
+            layer.update()
+
         message_type = "CONN"
         name = "Glue-Viz"
         length_of_name = str(format(len(name), "04"))
         message = protocol_version + message_type + length_of_name + name
         self.socket.send(bytes(message, 'utf-8'))
-
-        for layer in self.layers:
-            layer.update()
 
     def get_layer_artist(self, cls, layer=None, layer_state=None):
         return cls(self, self.state, layer=layer, layer_state=layer_state)
