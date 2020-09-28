@@ -70,7 +70,7 @@ class OpenSpaceDataViewer(DataViewer):
 
         message_type = "CONN"
         name = "Glue-Viz"
-        length_of_name = str(format(len(name), "04"))
+        length_of_name = str(format(len(name), "09"))
         message = protocol_version + message_type + length_of_name + name
         self.socket.send(bytes(message, 'utf-8'))
 
