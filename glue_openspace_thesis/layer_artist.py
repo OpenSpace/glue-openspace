@@ -35,7 +35,6 @@ continueListening = True
 
 
 class OpenSpaceLayerArtist(LayerArtist):
-
     _layer_state_cls = OpenSpaceLayerState
 
     def __init__(self, viewer, *args, **kwargs):
@@ -66,7 +65,7 @@ class OpenSpaceLayerArtist(LayerArtist):
     #     self.artist.set_zorder(self.state.zorder)
     #     self.redraw()
 
-    def _on_attribute_change(self, *args, **kwargs):
+    def _on_attribute_change(self, **kwargs):
 
         force = kwargs.get('force', False)
 
@@ -176,7 +175,6 @@ class OpenSpaceLayerArtist(LayerArtist):
 
     def receive_message(self):
         if self.sock is None:
-            print("Socket is none")
             return
 
         message_received = self.sock.recv(4096).decode('ascii')
@@ -208,7 +206,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             end += length_of_value
 
             # Value is sent in this format: (redValue, greenValue, blueValue)
-            string_value = subject[start+1:end-1]  # Don't include ( and )
+            string_value = subject[start + 1:end - 1]  # Don't include ( and )
             len_string_value = len(string_value)
 
             x = 0
@@ -232,10 +230,8 @@ class OpenSpaceLayerArtist(LayerArtist):
                 y += 1
             b = float(blue)
 
-            print('red: ', r)
-            print('green: ', g)
-            print('blue: ', b)
-            self.state.color = to_hex([r, g, b])
+            self._uuid = identifier
+            self._uuid.color = to_hex([r, g, b])
 
         if "UPOP" in message_type:
             length_of_subject = int(message_received[start: end])
@@ -257,7 +253,8 @@ class OpenSpaceLayerArtist(LayerArtist):
             end += length_of_value
             value = float(subject[start:end])
 
-            self.state.alpha = value
+            self._uuid = identifier
+            self._uuid.alpha = value
 
         if "UPSI" in message_type:
             length_of_subject = int(message_received[start: end])
@@ -279,15 +276,14 @@ class OpenSpaceLayerArtist(LayerArtist):
             end += length_of_value
             value = float(subject[start:end])
 
-            self.state.size = value
+            self._uuid = identifier
+            self._uuid.size = value
 
         if "TOVI" in message_type:
             length_of_subject = int(message_received[start: end])
             start += 4
             end += length_of_subject
             subject = message_received[start:end]
-
-            print('Message received: ', subject)
 
             # Starting from subject
             start = 0
@@ -299,10 +295,11 @@ class OpenSpaceLayerArtist(LayerArtist):
             start += length_of_identifier
             value = subject[start]
 
+            self._uuid = identifier
             if value is "F":
-                self.state.visible = False
+                self._uuid.visible = False
             else:
-                self.state.visible = True
+                self._uuid.visible = True
 
     def clear(self):
         if self.sock is None:
@@ -325,4 +322,3 @@ class OpenSpaceLayerArtist(LayerArtist):
         if self.sock is None:
             return
         self._on_attribute_change(force=True)
-
