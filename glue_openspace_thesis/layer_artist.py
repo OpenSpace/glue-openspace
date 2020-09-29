@@ -230,8 +230,8 @@ class OpenSpaceLayerArtist(LayerArtist):
                 y += 1
             b = float(blue)
 
-            self._uuid = identifier
-            self._uuid.color = to_hex([r, g, b])
+            if self._uuid == identifier:
+                self.state.color = to_hex([r, g, b])
 
         if "UPOP" in message_type:
             length_of_subject = int(message_received[start: end])
