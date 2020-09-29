@@ -270,8 +270,8 @@ class OpenSpaceLayerArtist(LayerArtist):
             end += length_of_value
             value = float(subject[start:end])
 
-            self._uuid = identifier
-            self._uuid.alpha = value
+            if self._uuid == identifier:
+                self.state.alpha = value
 
         if "UPSI" in message_type:
             length_of_subject = int(message_received[start: end])
@@ -293,8 +293,8 @@ class OpenSpaceLayerArtist(LayerArtist):
             end += length_of_value
             value = float(subject[start:end])
 
-            self._uuid = identifier
-            self._uuid.size = value
+            if self._uuid == identifier:
+                self.state.size = value
 
         if "TOVI" in message_type:
             length_of_subject = int(message_received[start: end])
@@ -312,11 +312,11 @@ class OpenSpaceLayerArtist(LayerArtist):
             start += length_of_identifier
             value = subject[start]
 
-            self._uuid = identifier
-            if value is "F":
-                self._uuid.visible = False
-            else:
-                self._uuid.visible = True
+            if self._uuid == identifier:
+                if value is "F":
+                    self.state.visible = False
+                else:
+                    self.state.visible = True
 
     def clear(self):
         if self.sock is None:
