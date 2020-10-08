@@ -11,7 +11,7 @@ from glue.core import Data, Subset
 from glue.viewers.common.layer_artist import LayerArtist
 
 from .layer_state import OpenSpaceLayerState
-from .utils import data_to_speck, get_point_data
+from .utils import get_point_data
 
 from threading import Thread
 from matplotlib.colors import ColorConverter
@@ -130,17 +130,6 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         try:
-            temporary_file = data_to_speck(self.state.layer,
-                                           self._viewer_state.lon_att,
-                                           self._viewer_state.lat_att,
-                                           alternative_attribute=self._viewer_state.alt_att,
-                                           alternative_unit=self._viewer_state.alt_unit,
-                                           frame=self._viewer_state.frame)
-        except Exception as exc:
-            print(str(exc))
-            return
-
-        try:
             point_data = get_point_data(self.state.layer,
                                         self._viewer_state.lon_att,
                                         self._viewer_state.lat_att,
@@ -168,7 +157,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         time.sleep(WAIT_TIME)
 
         message_type = "ASGN"
-        length_of_file_path = str(len(temporary_file))
         identifier = self._uuid
         length_of_identifier = str(len(identifier))
         color = str(to_rgb(self.state.color))
@@ -179,7 +167,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         length_of_gui = str(len(gui_name))
         size = str(self.state.size)
         length_of_size = str(len(size))
-        subject = length_of_identifier + identifier + length_of_color + color + length_of_file_path + temporary_file + length_of_opacity + opacity + length_of_size + size + length_of_gui + gui_name
+        subject = length_of_identifier + identifier + length_of_color + color + length_of_opacity + opacity + length_of_size + size + length_of_gui + gui_name
         length_of_subject = str(format(len(subject), "09"))
 
         message = protocol_version + message_type + length_of_subject + subject
