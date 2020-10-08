@@ -3,10 +3,10 @@ import tempfile
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
-__all__ = ['data_to_speck', 'data_to_binary']
+__all__ = ['data_to_speck', 'get_point_data']
 
 
-def data_to_binary(data, longitude_attribute, latitude_attribute, alternative_attribute=None,
+def get_point_data(data, longitude_attribute, latitude_attribute, alternative_attribute=None,
                    frame=None, alternative_unit=None):
 
     binary_data_string = ""
@@ -55,8 +55,8 @@ def data_to_binary(data, longitude_attribute, latitude_attribute, alternative_at
     length_y_coordinates = str(format(len(y_coordinates), "09"))
     length_z_coordinates = str(format(len(z_coordinates), "09"))
 
-    binary_data_string = length_x_coordinates + x_coordinates + length_y_coordinates + y_coordinates + length_z_coordinates + z_coordinates
-    return binary_data_string
+    point_data_string = length_x_coordinates + x_coordinates + length_y_coordinates + y_coordinates + length_z_coordinates + z_coordinates
+    return point_data_string
 
 
 def data_to_speck(data, longitude_attribute, latitude_attribute, alternative_attribute=None,

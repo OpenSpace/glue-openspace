@@ -11,7 +11,7 @@ from glue.core import Data, Subset
 from glue.viewers.common.layer_artist import LayerArtist
 
 from .layer_state import OpenSpaceLayerState
-from .utils import data_to_speck, data_to_binary
+from .utils import data_to_speck, get_point_data
 
 from threading import Thread
 from matplotlib.colors import ColorConverter
@@ -141,12 +141,12 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         try:
-            binary_data = data_to_binary(self.state.layer,
-                                         self._viewer_state.lon_att,
-                                         self._viewer_state.lat_att,
-                                         alternative_attribute=self._viewer_state.alt_att,
-                                         alternative_unit=self._viewer_state.alt_unit,
-                                         frame=self._viewer_state.frame)
+            point_data = get_point_data(self.state.layer,
+                                        self._viewer_state.lon_att,
+                                        self._viewer_state.lat_att,
+                                        alternative_attribute=self._viewer_state.alt_att,
+                                        alternative_unit=self._viewer_state.alt_unit,
+                                        frame=self._viewer_state.frame)
         except Exception as exc:
             print(str(exc))
             return
@@ -161,11 +161,12 @@ class OpenSpaceLayerArtist(LayerArtist):
             self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
 
         message_type = "DATA"
-        subject = binary_data
+        subject = point_data
         length_of_subject = str(format(len(subject), "09"))
         message = protocol_version + message_type + length_of_subject + subject
         self.sock.send(bytes(message, 'utf-8'))
         time.sleep(WAIT_TIME)
+
         message_type = "ASGN"
         length_of_file_path = str(len(temporary_file))
         identifier = self._uuid
@@ -333,7 +334,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         self._uuid = None
 
         # Wait for a short time to avoid sending too many messages in quick succession
-        time.sleep(WAIT_TIME * 10)
+        time.sleep(WAIT_TIME)
 
     def update(self):
         if self.sock is None:
