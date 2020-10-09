@@ -236,8 +236,10 @@ class OpenSpaceLayerArtist(LayerArtist):
                 y += 1
             b = float(blue)
 
-            if self._uuid == identifier:
-                self.state.color = to_hex([r, g, b])
+            c = to_hex([r, g, b])
+            self._uuid = identifier
+            print('****Color identifier: ', identifier)
+            self.state.color = c
 
         if "UPOP" in message_type:
             length_of_subject = int(message_received[start: end])
@@ -259,8 +261,9 @@ class OpenSpaceLayerArtist(LayerArtist):
             end += length_of_value
             value = float(subject[start:end])
 
-            if self._uuid == identifier:
-                self.state.alpha = value
+            self._uuid = identifier
+            print('****Opacity identifier: ', identifier)
+            self.state.alpha = value
 
         if "UPSI" in message_type:
             length_of_subject = int(message_received[start: end])
@@ -282,8 +285,9 @@ class OpenSpaceLayerArtist(LayerArtist):
             end += length_of_value
             value = float(subject[start:end])
 
-            if self._uuid == identifier:
-                self.state.size = value
+            self._uuid = identifier
+            print('****Size identifier: ', identifier)
+            self.state.size = value
 
         if "TOVI" in message_type:
             length_of_subject = int(message_received[start: end])
@@ -301,11 +305,14 @@ class OpenSpaceLayerArtist(LayerArtist):
             start += length_of_identifier
             value = subject[start]
 
-            if self._uuid == identifier:
-                if value is "F":
-                    self.state.visible = False
-                else:
-                    self.state.visible = True
+            self._uuid = identifier
+            print('****Visibility identifier: ', identifier)
+            if value is "F":
+                # self.state.add_callback(False, self.state.visible)
+                self.state.visible = False
+            else:
+                # self.state.add_callback(True, self.state.visible)
+                self.state.visible = True
 
     def clear(self):
         if self.sock is None:
