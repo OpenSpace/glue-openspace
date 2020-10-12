@@ -20,7 +20,7 @@ __all__ = ['OpenSpaceDataViewer']
 LOGO = os.path.abspath(os.path.join(os.path.dirname(__file__), 'logo.png'))
 
 # Time to wait after sending websocket message
-WAIT_TIME = 1
+WAIT_TIME = 0.05
 
 
 class OpenSpaceDataViewer(DataViewer):
@@ -61,6 +61,7 @@ class OpenSpaceDataViewer(DataViewer):
     def connect_to_openspace(self, *args):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         self.socket = socket.create_connection(('localhost', 4700))
+        print('Connected to OpenSpace')
         self._button.setEnabled(False)
         self._button.setText('Connected')
         time.sleep(WAIT_TIME)

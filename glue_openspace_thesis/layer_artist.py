@@ -32,6 +32,7 @@ WAIT_TIME = 0.05
 
 protocol_version = "1"
 continueListening = True
+willSendMessage = True
 
 
 class OpenSpaceLayerArtist(LayerArtist):
@@ -68,6 +69,7 @@ class OpenSpaceLayerArtist(LayerArtist):
     def _on_attribute_change(self, **kwargs):
 
         force = kwargs.get('force', False)
+        global willSendMessage
 
         if self.sock is None:
             return
@@ -119,6 +121,9 @@ class OpenSpaceLayerArtist(LayerArtist):
                 length_of_subject = str(format(len(subject), "09"))
 
             if subject:
+                if willSendMessage is False:
+                    willSendMessage = True
+                    return
                 message = protocol_version + message_type + length_of_subject + subject
                 self.sock.send(bytes(message, 'utf-8'))
                 time.sleep(WAIT_TIME)
@@ -183,6 +188,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         if self.sock is None:
             return
 
+        global willSendMessage
         message_received = self.sock.recv(4096).decode('ascii')
         print('Received message from socket: ', message_received)
 
@@ -193,6 +199,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         end += 4
 
         if "UPCO" in message_type:
+            willSendMessage = False
             length_of_subject = int(message_received[start: end])
             start += 4
             end += length_of_subject
@@ -242,6 +249,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             self.state.color = c
 
         if "UPOP" in message_type:
+            willSendMessage = False
             length_of_subject = int(message_received[start: end])
             start += 4
             end += length_of_subject
@@ -266,6 +274,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             self.state.alpha = value
 
         if "UPSI" in message_type:
+            willSendMessage = False
             length_of_subject = int(message_received[start: end])
             start += 4
             end += length_of_subject
@@ -290,6 +299,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             self.state.size = value
 
         if "TOVI" in message_type:
+            willSendMessage = False
             length_of_subject = int(message_received[start: end])
             start += 4
             end += length_of_subject
@@ -313,6 +323,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             else:
                 # self.state.add_callback(True, self.state.visible)
                 self.state.visible = True
+        willSendMessage = True
 
     def clear(self):
         if self.sock is None:
