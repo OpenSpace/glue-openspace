@@ -25,6 +25,8 @@ class OpenSpaceViewerState(ViewerState):
 
     lon_att = SelectionCallbackProperty(default_index=0)
     lat_att = SelectionCallbackProperty(default_index=1)
+    lum_att = SelectionCallbackProperty(default_index=0)
+    vel_att = SelectionCallbackProperty(default_index=1)
     alt_att = SelectionCallbackProperty(default_index=2)
     alt_unit = SelectionCallbackProperty(default_index=4)
     alt_type = SelectionCallbackProperty(default_index=0)
@@ -52,6 +54,18 @@ class OpenSpaceViewerState(ViewerState):
                                                      world_coord=True,
                                                      pixel_coord=False)
 
+        self.lum_att_helper = ComponentIDComboHelper(self, 'lum_att',
+                                                     numeric=True,
+                                                     categorical=False,
+                                                     world_coord=True,
+                                                     pixel_coord=False)
+
+        self.vel_att_helper = ComponentIDComboHelper(self, 'vel_att',
+                                                     numeric=True,
+                                                     categorical=False,
+                                                     world_coord=True,
+                                                     pixel_coord=False)
+
         self.alt_att_helper = ComponentIDComboHelper(self, 'alt_att',
                                                      numeric=True,
                                                      categorical=False,
@@ -66,6 +80,8 @@ class OpenSpaceViewerState(ViewerState):
     def _on_layers_changed(self, *args):
         self.lon_att_helper.set_multiple_data(self.layers_data)
         self.lat_att_helper.set_multiple_data(self.layers_data)
+        self.lum_att_helper.set_multiple_data(self.layers_data)
+        self.vel_att_helper.set_multiple_data(self.layers_data)
         self.alt_att_helper.set_multiple_data(self.layers_data)
 
     def _update_priority(self, name):

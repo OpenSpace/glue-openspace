@@ -69,11 +69,12 @@ class OpenSpaceDataViewer(DataViewer):
         for layer in self.layers:
             layer.update()
 
-        message_type = "CONN"
-        name = "Glue-Viz"
-        length_of_name = str(format(len(name), "09"))
-        message = protocol_version + message_type + length_of_name + name
-        self.socket.send(bytes(message, 'utf-8'))
+        # Create and send "Connection" message to OS
+        CONN_message_type = "CONN"
+        CONN_name = "Glue-Viz"
+        CONN_length_of_name = str(format(len(CONN_name), "09"))
+        CONN_message = protocol_version + CONN_message_type + CONN_length_of_name + CONN_name
+        self.socket.send(bytes(CONN_message, 'utf-8'))
 
     def get_layer_artist(self, cls, layer=None, layer_state=None):
         return cls(self, self.state, layer=layer, layer_state=layer_state)

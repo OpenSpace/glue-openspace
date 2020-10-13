@@ -1,7 +1,7 @@
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
-__all__ = ['get_point_data']
+__all__ = ['get_point_data', 'get_luminosity_data', 'get_velocity_data']
 
 
 def get_point_data(data, longitude_attribute, latitude_attribute, alternative_attribute=None,
@@ -51,3 +51,33 @@ def get_point_data(data, longitude_attribute, latitude_attribute, alternative_at
 
     point_data_string = length_x_coordinates + x_coordinates + length_y_coordinates + y_coordinates + length_z_coordinates + z_coordinates
     return point_data_string
+
+
+def get_luminosity_data(data, luminosity_attribute):
+
+    luminosity_data = ""
+
+    luminosity_values = data[luminosity_attribute]
+
+    for i in range(len(luminosity_values)):
+        luminosity_data += (str(luminosity_values[i]) + ",")
+
+    length_luminosity_data = str(format(len(luminosity_data), "09"))
+
+    luminosity_data_string = length_luminosity_data + luminosity_data
+    return luminosity_data_string
+
+
+def get_velocity_data(data, velocity_attribute):
+
+    velocity_data = ""
+
+    velocity_values = data[velocity_attribute]
+
+    for i in range(len(velocity_values)):
+        velocity_data += (str(velocity_values[i]) + ",")
+
+    length_velocity_data = str(format(len(velocity_data), "09"))
+
+    velocity_data_string = length_velocity_data + velocity_data
+    return velocity_data_string
