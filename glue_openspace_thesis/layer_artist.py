@@ -225,6 +225,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         global willSendMessage
+        willSendMessage = False
         message_received = self.sock.recv(4096).decode('ascii')
         print('Received message from socket: ', message_received)
 
