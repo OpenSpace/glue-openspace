@@ -83,7 +83,11 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         # If properties update in Glue, send message to OS with new values
-        if self._uuid and willSendMessage:
+        if self._uuid:
+            if willSendMessage is False:
+                willSendMessage = True
+                return
+
             message_type = ""
             subject = ""
             length_of_subject = ""
@@ -147,13 +151,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         if isinstance(self.state.layer, Subset) and np.sum(self.state.layer.to_mask()) == 0:
             return
 
-        # Create a random identifier
-        self._uuid = str(uuid.uuid4())
-        if isinstance(self.state.layer, Data):
-            self._display_name = self.state.layer.label
-        else:
-            self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
-
         # Create and send a message to OS including the point data
         DATA_message_type = "DATA"
         DATA_subject = point_data
@@ -191,6 +188,13 @@ class OpenSpaceLayerArtist(LayerArtist):
             except Exception as exc:
                 print(str(exc))
                 return
+
+        # Create a random identifier
+        self._uuid = str(uuid.uuid4())
+        if isinstance(self.state.layer, Data):
+            self._display_name = self.state.layer.label
+        else:
+            self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
 
         # Create an "Add Scene Graph Message" and send it to OS
         ASGN_message_type = "ASGN"
