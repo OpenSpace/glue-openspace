@@ -216,9 +216,8 @@ class OpenSpaceLayerArtist(LayerArtist):
         time.sleep(WAIT_TIME)
 
     def request_listen(self):
-        while continueListening:
+        while continueListening and self.sock is not None:
             self.receive_message()
-            time.sleep(WAIT_TIME)
 
     def receive_message(self):
         if self.sock is None:

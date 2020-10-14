@@ -1,7 +1,6 @@
 import os
 import time
 import socket
-from abc import ABC
 
 from qtpy.QtWidgets import QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QPushButton, QWidget
 from qtpy.QtGui import QImage, QPixmap
