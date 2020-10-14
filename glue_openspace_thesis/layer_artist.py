@@ -261,14 +261,14 @@ class OpenSpaceLayerArtist(LayerArtist):
 
             x = 0
             red = ""
-            while UPCO_string_value[x] is not ",":  # first value in string is before first ","
+            while UPCO_string_value[x] != ",":  # first value in string is before first ","
                 red += UPCO_string_value[x]
                 x += 1
             r = float(red)
 
             x += 1
             green = ""
-            while UPCO_string_value[x] is not ",":  # second value in string is before second ","
+            while UPCO_string_value[x] != ",":  # second value in string is before second ","
                 green += UPCO_string_value[x]
                 x += 1
             g = float(green)
@@ -366,7 +366,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
             if self._uuid == TOVI_identifier:
                 print('****Visibility identifier: ', TOVI_identifier)
-                if TOVI_value is "F":
+                if TOVI_value == "F":
                     self.state.visible = False
                 else:
                     self.state.visible = True
