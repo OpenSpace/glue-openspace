@@ -189,7 +189,12 @@ class OpenSpaceLayerArtist(LayerArtist):
                 return
 
         # Create a random identifier
-        self._uuid = str(uuid.uuid4())
+        if isinstance(self.state.layer, Subset):
+            print("Vi har ett subset")
+            self._uuid = str(uuid.uuid4())
+        else:
+            print("Vi har original data")
+            self._uuid = str(uuid.uuid4())
         if isinstance(self.state.layer, Data):
             self._display_name = self.state.layer.label
         else:
