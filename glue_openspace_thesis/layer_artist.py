@@ -283,12 +283,9 @@ class OpenSpaceLayerArtist(LayerArtist):
             b = float(blue)
 
             UPCO_value = to_hex([r, g, b])
-            self._uuid = UPCO_identifier
             print('****Color identifier: ', UPCO_identifier)
-
-            if self._uuid == UPCO_identifier:
-                print('****Color identifier: ', UPCO_identifier)
-                self.state.color = UPCO_value
+            self._uuid = UPCO_identifier
+            self.state.color = UPCO_value
 
         if "UPOP" in receive_message_type:
             will_send_message = False
@@ -313,10 +310,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
             self._uuid = UPOP_identifier
             print('****Opacity identifier: ', UPOP_identifier)
-
-            if self._uuid == UPOP_identifier:
-                print('****Opacity identifier: ', UPOP_identifier)
-                self.state.alpha = UPOP_value
+            self.state.alpha = UPOP_value
 
         if "UPSI" in receive_message_type:
             will_send_message = False
@@ -341,10 +335,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
             self._uuid = UPSI_identifier
             print('****Size identifier: ', UPSI_identifier)
-
-            if self._uuid == UPSI_identifier:
-                print('****Size identifier: ', UPSI_identifier)
-                self.state.size = UPSI_value
+            self.state.size = UPSI_value
 
         if "TOVI" in receive_message_type:
             will_send_message = False
@@ -366,12 +357,10 @@ class OpenSpaceLayerArtist(LayerArtist):
             self._uuid = TOVI_identifier
             print('****Visibility identifier: ', TOVI_identifier)
 
-            if self._uuid == TOVI_identifier:
-                print('****Visibility identifier: ', TOVI_identifier)
-                if TOVI_value == "F":
-                    self.state.visible = False
-                else:
-                    self.state.visible = True
+            if TOVI_value == "F":
+                self.state.visible = False
+            else:
+                self.state.visible = True
 
         will_send_message = True
 
