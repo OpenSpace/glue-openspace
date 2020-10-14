@@ -31,8 +31,8 @@ shutil.copy(TEXTURE_ORIGIN, TEXTURE)
 WAIT_TIME = 0.05
 
 protocol_version = "1"
-continueListening = True
-willSendMessage = True
+continue_listening = True
+will_send_message = True
 
 
 class OpenSpaceLayerArtist(LayerArtist):
@@ -69,7 +69,7 @@ class OpenSpaceLayerArtist(LayerArtist):
     def _on_attribute_change(self, **kwargs):
 
         force = kwargs.get('force', False)
-        global willSendMessage
+        global will_send_message
 
         if self.sock is None:
             return
@@ -84,8 +84,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         # If properties update in Glue, send message to OS with new values
         if self._uuid:
-            if willSendMessage is False:
-                willSendMessage = True
+            if will_send_message is False:
                 return
 
             message_type = ""
@@ -216,15 +215,18 @@ class OpenSpaceLayerArtist(LayerArtist):
         time.sleep(WAIT_TIME)
 
     def request_listen(self):
-        while continueListening and self.sock is not None:
+        time.sleep(10)  # Should be replaced by a "wait til there's a socket connection"-function
+        while continue_listening:
             self.receive_message()
+            time.sleep(WAIT_TIME)
 
     def receive_message(self):
         if self.sock is None:
             return
 
-        global willSendMessage
-        willSendMessage = False
+        global will_send_message
+        will_send_message = False
+
         message_received = self.sock.recv(4096).decode('ascii')
         print('Received message from socket: ', message_received)
 
@@ -236,7 +238,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         end += 4
 
         if "UPCO" in receive_message_type:
-            willSendMessage = False
+            will_send_message = False
             UPCO_length_of_subject = int(message_received[start: end])
             start += 4
             end += UPCO_length_of_subject
@@ -289,7 +291,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 self.state.color = UPCO_value
 
         if "UPOP" in receive_message_type:
-            willSendMessage = False
+            will_send_message = False
             UPOP_length_of_subject = int(message_received[start: end])
             start += 4
             end += UPOP_length_of_subject
@@ -317,7 +319,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 self.state.alpha = UPOP_value
 
         if "UPSI" in receive_message_type:
-            willSendMessage = False
+            will_send_message = False
             UPSI_length_of_subject = int(message_received[start: end])
             start += 4
             end += UPSI_length_of_subject
@@ -345,7 +347,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 self.state.size = UPSI_value
 
         if "TOVI" in receive_message_type:
-            willSendMessage = False
+            will_send_message = False
             TOVI_length_of_subject = int(message_received[start: end])
             start += 4
             end += TOVI_length_of_subject
@@ -371,7 +373,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 else:
                     self.state.visible = True
 
-        willSendMessage = True
+        will_send_message = True
 
     def clear(self):
         if self.sock is None:
