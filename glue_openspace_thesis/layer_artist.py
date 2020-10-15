@@ -85,6 +85,8 @@ class OpenSpaceLayerArtist(LayerArtist):
         # If properties update in Glue, send message to OS with new values
         if self._uuid:
             if will_send_message is False:
+                will_send_message = True
+                print('Not sending message')
                 return
 
             message_type = ""
@@ -127,6 +129,9 @@ class OpenSpaceLayerArtist(LayerArtist):
             if subject:
                 message = protocol_version + message_type + length_of_subject + subject
                 self.sock.send(bytes(message, 'utf-8'))
+                print('Messaged sent: ', message)
+                for layer in self._viewer.layers:
+                    print(layer)
                 time.sleep(WAIT_TIME)
             return
 
@@ -189,12 +194,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 return
 
         # Create a random identifier
-        if isinstance(self.state.layer, Subset):
-            print("Vi har ett subset")
-            self._uuid = str(uuid.uuid4())
-        else:
-            print("Vi har original data")
-            self._uuid = str(uuid.uuid4())
+        self._uuid = str(uuid.uuid4())
         if isinstance(self.state.layer, Data):
             self._display_name = self.state.layer.label
         else:
@@ -217,20 +217,18 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         ASGN_message = protocol_version + ASGN_message_type + ASGN_length_of_subject + ASGN_subject
         self.sock.send(bytes(ASGN_message, 'utf-8'))
+        print('Messaged sent: ', ASGN_message)
         time.sleep(WAIT_TIME)
 
     def request_listen(self):
-        time.sleep(10)  # Should be replaced by a "wait til there's a socket connection"-function
         while continue_listening:
             self.receive_message()
-            time.sleep(WAIT_TIME)
 
     def receive_message(self):
         if self.sock is None:
             return
 
         global will_send_message
-        will_send_message = False
 
         message_received = self.sock.recv(4096).decode('ascii')
         print('Received message from socket: ', message_received)
@@ -238,136 +236,99 @@ class OpenSpaceLayerArtist(LayerArtist):
         # Start and end are message offsets
         start = 0
         end = 4
-        receive_message_type = message_received[start:end]
+        message_type = message_received[start:end]
         start += 4
         end += 4
+        length_of_subject = int(message_received[start: end])
+        start += 4
+        end += length_of_subject
+        subject = message_received[start:end]
 
-        if "UPCO" in receive_message_type:
-            will_send_message = False
-            UPCO_length_of_subject = int(message_received[start: end])
-            start += 4
-            end += UPCO_length_of_subject
-            UPCO_subject = message_received[start:end]
-
-            # Starting from subject
-            start = 0
-            end = 2
-            UPCO_length_of_identifier = int(UPCO_subject[start:end])
-            start += 2
-            end += UPCO_length_of_identifier
-            UPCO_identifier = UPCO_subject[start:end]
-            start += UPCO_length_of_identifier
+        # Resetting message offsets to read from subject
+        start = 0
+        end = 2
+        length_of_identifier = int(subject[start:end])
+        start += 2
+        end += length_of_identifier
+        identifier = subject[start:end]
+        start += length_of_identifier
+        if message_type == "UPCO":
             end += 2
-            UPCO_length_of_value = int(UPCO_subject[start:end])
-            start = end
-            end += UPCO_length_of_value
-
-            # Value is received in this format: (redValue, greenValue, blueValue)
-            UPCO_string_value = UPCO_subject[start + 1:end - 1]  # Don't include ( and )
-            UPCO_len_string_value = len(UPCO_string_value)
-
-            x = 0
-            red = ""
-            while UPCO_string_value[x] != ",":  # first value in string is before first ","
-                red += UPCO_string_value[x]
-                x += 1
-            r = float(red)
-
-            x += 1
-            green = ""
-            while UPCO_string_value[x] != ",":  # second value in string is before second ","
-                green += UPCO_string_value[x]
-                x += 1
-            g = float(green)
-
-            x += 1
-            blue = ""
-            for y in range(x, UPCO_len_string_value):  # third value in string
-                blue += UPCO_string_value[y]
-                y += 1
-            b = float(blue)
-
-            UPCO_value = to_hex([r, g, b])
-            print('****Color identifier: ', UPCO_identifier)
-            self._uuid = UPCO_identifier
-            self.state.color = UPCO_value
-
-        if "UPOP" in receive_message_type:
-            will_send_message = False
-            UPOP_length_of_subject = int(message_received[start: end])
-            start += 4
-            end += UPOP_length_of_subject
-            UPOP_subject = message_received[start:end]
-
-            # Starting from subject
-            start = 0
-            end = 2
-            UPOP_length_of_identifier = int(UPOP_subject[start:end])
-            start += 2
-            end += UPOP_length_of_identifier
-            UPOP_identifier = UPOP_subject[start:end]
-            start += UPOP_length_of_identifier
+        else:
             end += 1
-            UPOP_length_of_value = int(UPOP_subject[start:end])
-            start = end
-            end += UPOP_length_of_value
-            UPOP_value = float(UPOP_subject[start:end])
 
-            self._uuid = UPOP_identifier
-            print('****Opacity identifier: ', UPOP_identifier)
-            self.state.alpha = UPOP_value
+        for layer in self._viewer.layers:
+            if layer._uuid == identifier:
 
-        if "UPSI" in receive_message_type:
-            will_send_message = False
-            UPSI_length_of_subject = int(message_received[start: end])
-            start += 4
-            end += UPSI_length_of_subject
-            UPSI_subject = message_received[start:end]
+                if message_type == "UPCO":
+                    length_of_value = int(subject[start:end])
+                    start = end
+                    end += length_of_value
 
-            # Starting from subject
-            start = 0
-            end = 2
-            UPSI_length_of_identifier = int(UPSI_subject[start:end])
-            start += 2
-            end += UPSI_length_of_identifier
-            UPSI_identifier = UPSI_subject[start:end]
-            start += UPSI_length_of_identifier
-            end += 1
-            UPSI_length_of_value = int(UPSI_subject[start:end])
-            start = end
-            end += UPSI_length_of_value
-            UPSI_value = float(UPSI_subject[start:end])
+                    # Value is received in this format: (redValue, greenValue, blueValue)
+                    UPCO_string_value = subject[start + 1:end - 1]  # Don't include ( and )
+                    UPCO_len_string_value = len(UPCO_string_value)
 
-            self._uuid = UPSI_identifier
-            print('****Size identifier: ', UPSI_identifier)
-            self.state.size = UPSI_value
+                    x = 0
+                    red = ""
+                    while UPCO_string_value[x] != ",":  # first value in string is before first ","
+                        red += UPCO_string_value[x]
+                        x += 1
+                    r = float(red)
 
-        if "TOVI" in receive_message_type:
-            will_send_message = False
-            TOVI_length_of_subject = int(message_received[start: end])
-            start += 4
-            end += TOVI_length_of_subject
-            TOVI_subject = message_received[start:end]
+                    x += 1
+                    green = ""
+                    while UPCO_string_value[x] != ",":  # second value in string is before second ","
+                        green += UPCO_string_value[x]
+                        x += 1
+                    g = float(green)
 
-            # Starting from subject
-            start = 0
-            end = 2
-            TOVI_length_of_identifier = int(TOVI_subject[start:end])
-            start += 2
-            end += TOVI_length_of_identifier
-            TOVI_identifier = TOVI_subject[start:end]
-            start += TOVI_length_of_identifier
-            TOVI_value = TOVI_subject[start]
+                    x += 1
+                    blue = ""
+                    for y in range(x, UPCO_len_string_value):  # third value in string
+                        blue += UPCO_string_value[y]
+                        y += 1
+                    b = float(blue)
 
-            self._uuid = TOVI_identifier
-            print('****Visibility identifier: ', TOVI_identifier)
+                    UPCO_value = to_hex([r, g, b])
 
-            if TOVI_value == "F":
-                self.state.visible = False
-            else:
-                self.state.visible = True
+                    will_send_message = False
+                    layer.state.color = UPCO_value
+                    break
 
-        will_send_message = True
+                if message_type == "UPOP":
+                    length_of_value = int(subject[start:end])
+                    start = end
+                    end += length_of_value
+
+                    UPOP_value = float(subject[start:end])
+
+                    will_send_message = False
+                    layer.state.alpha = UPOP_value
+                    break
+
+                if message_type == "UPSI":
+                    length_of_value = int(subject[start:end])
+                    start = end
+                    end += length_of_value
+
+                    UPSI_value = float(subject[start:end])
+
+                    will_send_message = False
+                    layer.state.size = UPSI_value
+                    break
+
+                if message_type == "TOVI":
+                    TOVI_value = subject[start]
+                    will_send_message = False
+
+                    if TOVI_value == "F":
+                        layer.state.visible = False
+                    else:
+                        layer.state.visible = True
+                    break
+
+                break
 
     def clear(self):
         if self.sock is None:
@@ -376,12 +337,12 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         # Create and send "Remove Scene Graph Node" message to OS
-        RSGN_message_type = "RSGN"
-        RSGN_subject = self._uuid
-        RSGN_length_of_subject = str(format(len(RSGN_subject), "09"))
+        message_type = "RSGN"
+        subject = self._uuid
+        length_of_subject = str(format(len(subject), "09"))
 
-        RSGN_message = protocol_version + RSGN_message_type + RSGN_length_of_subject + RSGN_subject
-        self.sock.send(bytes(RSGN_message, 'utf-8'))
+        message = protocol_version + message_type + length_of_subject + subject
+        self.sock.send(bytes(message, 'utf-8'))
         self._uuid = None
 
         # Wait for a short time to avoid sending too many messages in quick succession
