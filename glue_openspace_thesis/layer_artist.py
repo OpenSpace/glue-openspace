@@ -220,8 +220,10 @@ class OpenSpaceLayerArtist(LayerArtist):
         time.sleep(WAIT_TIME)
 
     def request_listen(self):
-        time.sleep(10)  # Should be replaced by a "wait til there's a socket connection"-function
         while continue_listening:
+            if not self.receive_message():
+                return
+
             self.receive_message()
             time.sleep(WAIT_TIME)
 
