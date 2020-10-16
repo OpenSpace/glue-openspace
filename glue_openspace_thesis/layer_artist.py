@@ -224,7 +224,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         while continue_listening:
             if not self.receive_message():
                 return
-
             self.receive_message()
 
     def receive_message(self):
@@ -355,3 +354,5 @@ class OpenSpaceLayerArtist(LayerArtist):
         if self.sock is None:
             return
         self._on_attribute_change(force=True)
+        self.receive_message()
+
