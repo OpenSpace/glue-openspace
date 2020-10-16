@@ -87,6 +87,8 @@ class OpenSpaceLayerArtist(LayerArtist):
             if will_send_message is False:
                 return
 
+            self.redraw()
+
             message_type = ""
             subject = ""
             length_of_subject = ""
@@ -134,8 +136,8 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         self.clear()
 
-        if not self.state.visible:
-            return
+        # if not self.state.visible:
+        #     return
 
         # Create string with coordinates for point data
         try:
@@ -187,6 +189,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 print(str(exc))
                 return
 
+        self.redraw()
         self.add_scene_graph_node()
 
     def add_scene_graph_node(self):
@@ -233,11 +236,11 @@ class OpenSpaceLayerArtist(LayerArtist):
 
     def request_listen(self):
         while continue_listening:
+            if self.sock is None:
+                return
             self.receive_message()
 
     def receive_message(self):
-        if self.sock is None:
-            return
 
         global will_send_message
 
@@ -342,6 +345,8 @@ class OpenSpaceLayerArtist(LayerArtist):
                 break
 
         will_send_message = False
+        self.redraw()
+
     def clear(self):
         if self.sock is None:
             return
@@ -351,6 +356,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         self.remove_scene_graph_node()
         self._uuid = None
 
+        self.redraw()
 
     def update(self):
         if self.sock is None:
