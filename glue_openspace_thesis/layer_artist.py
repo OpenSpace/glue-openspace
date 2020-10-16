@@ -220,6 +220,9 @@ class OpenSpaceLayerArtist(LayerArtist):
 
     def request_listen(self):
         while continue_listening:
+            if not self.receive_message():
+                return
+
             self.receive_message()
 
     def receive_message(self):
