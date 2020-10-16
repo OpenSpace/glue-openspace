@@ -19,7 +19,7 @@ __all__ = ['OpenSpaceDataViewer']
 LOGO = os.path.abspath(os.path.join(os.path.dirname(__file__), 'logo.png'))
 
 # Time to wait after sending websocket message
-WAIT_TIME = 0.05
+WAIT_TIME = 0.01
 
 
 class OpenSpaceDataViewer(DataViewer):

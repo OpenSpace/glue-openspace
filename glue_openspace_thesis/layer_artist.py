@@ -28,7 +28,7 @@ TEXTURE = tempfile.mktemp(suffix='.png')
 shutil.copy(TEXTURE_ORIGIN, TEXTURE)
 
 # Time to wait after sending websocket message
-WAIT_TIME = 0.05
+WAIT_TIME = 0.01
 
 protocol_version = "1"
 continue_listening = True
@@ -86,7 +86,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         if self._uuid:
             if will_send_message is False:
                 will_send_message = True
-                print('Not sending message')
                 return
 
             message_type = ""
@@ -94,6 +93,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             length_of_subject = ""
             identifier = self._uuid
             length_of_identifier = str(len(identifier))
+
             if "alpha" in changed:
                 message_type = "UPOP"
                 value = str(round(self.state.alpha, 4))
@@ -165,7 +165,6 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         # If the point data has associated luminosity data set - send it to OS
         if self._viewer_state.lum_att is not None:
-
             try:
                 luminosity_data = get_luminosity_data(self.state.layer, self._viewer_state.lum_att)
                 LUMI_message_type = "LUMI"
@@ -180,7 +179,6 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         # If the point data has associated velocity data set - send it to OS
         if self._viewer_state.vel_att is not None:
-
             try:
                 velocity_data = get_velocity_data(self.state.layer, self._viewer_state.vel_att)
                 VELO_message_type = "VELO"
