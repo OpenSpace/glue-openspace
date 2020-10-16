@@ -85,7 +85,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         # If properties update in Glue, send message to OS with new values
         if self._uuid:
             if will_send_message is False:
-                will_send_message = True
                 return
 
             message_type = ""
@@ -129,9 +128,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             if subject:
                 message = protocol_version + message_type + length_of_subject + subject
                 self.sock.send(bytes(message, 'utf-8'))
-                print('Messaged sent: ', message)
-                for layer in self._viewer.layers:
-                    print(layer)
+                print('Message sent: ', message)
                 time.sleep(WAIT_TIME)
             return
 
@@ -148,20 +145,19 @@ class OpenSpaceLayerArtist(LayerArtist):
                                         alternative_attribute=self._viewer_state.alt_att,
                                         alternative_unit=self._viewer_state.alt_unit,
                                         frame=self._viewer_state.frame)
+            # Create and send a message to OS including the point data
+            DATA_message_type = "DATA"
+            DATA_subject = point_data
+            DATA_length_of_subject = str(format(len(DATA_subject), "09"))
+            DATA_message = protocol_version + DATA_message_type + DATA_length_of_subject + DATA_subject
+            self.sock.send(bytes(DATA_message, 'utf-8'))
+            time.sleep(WAIT_TIME)
         except Exception as exc:
             print(str(exc))
             return
 
         if isinstance(self.state.layer, Subset) and np.sum(self.state.layer.to_mask()) == 0:
             return
-
-        # Create and send a message to OS including the point data
-        DATA_message_type = "DATA"
-        DATA_subject = point_data
-        DATA_length_of_subject = str(format(len(DATA_subject), "09"))
-        DATA_message = protocol_version + DATA_message_type + DATA_length_of_subject + DATA_subject
-        self.sock.send(bytes(DATA_message, 'utf-8'))
-        time.sleep(WAIT_TIME)
 
         # If the point data has associated luminosity data set - send it to OS
         if self._viewer_state.lum_att is not None:
@@ -191,6 +187,10 @@ class OpenSpaceLayerArtist(LayerArtist):
                 print(str(exc))
                 return
 
+        self.add_scene_graph_node()
+
+    def add_scene_graph_node(self):
+
         # Create a random identifier
         self._uuid = str(uuid.uuid4())
         if isinstance(self.state.layer, Data):
@@ -199,29 +199,40 @@ class OpenSpaceLayerArtist(LayerArtist):
             self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
 
         # Create an "Add Scene Graph Message" and send it to OS
-        ASGN_message_type = "ASGN"
-        ASGN_identifier = self._uuid
-        ASGN_length_of_identifier = str(len(ASGN_identifier))
-        ASGN_color = str(to_rgb(self.state.color))
-        ASGN_length_of_color = str(len(ASGN_color))
-        ASGN_opacity = str(round(self.state.alpha, 4))
-        ASGN_length_of_opacity = str(len(ASGN_opacity))
-        ASGN_gui_name = self._display_name
-        ASGN_length_of_gui = str(len(ASGN_gui_name))
-        ASGN_size = str(self.state.size)
-        ASGN_length_of_size = str(len(ASGN_size))
-        ASGN_subject = ASGN_length_of_identifier + ASGN_identifier + ASGN_length_of_color + ASGN_color + ASGN_length_of_opacity + ASGN_opacity + ASGN_length_of_size + ASGN_size + ASGN_length_of_gui + ASGN_gui_name
-        ASGN_length_of_subject = str(format(len(ASGN_subject), "09"))
+        identifier = self._uuid
+        length_of_identifier = str(len(identifier))
+        color = str(to_rgb(self.state.color))
+        length_of_color = str(len(color))
+        opacity = str(round(self.state.alpha, 4))
+        length_of_opacity = str(len(opacity))
+        gui_name = self._display_name
+        length_of_gui = str(len(gui_name))
+        size = str(self.state.size)
+        length_of_size = str(len(size))
+        subject = length_of_identifier + identifier + length_of_color + color + length_of_opacity + opacity + length_of_size + size + length_of_gui + gui_name
+        length_of_subject = str(format(len(subject), "09"))
 
-        ASGN_message = protocol_version + ASGN_message_type + ASGN_length_of_subject + ASGN_subject
-        self.sock.send(bytes(ASGN_message, 'utf-8'))
-        print('Messaged sent: ', ASGN_message)
+        message_type = "ASGN"
+        message = protocol_version + message_type + length_of_subject + subject
+        self.sock.send(bytes(message, 'utf-8'))
+        print('Messaged sent: ', message)
+
+        # Wait for a short time to avoid sending too many messages in quick succession
+        time.sleep(WAIT_TIME)
+
+    def remove_scene_graph_node(self):
+        # Create and send "Remove Scene Graph Node" message to OS
+        message_type = "RSGN"
+        subject = self._uuid
+        length_of_subject = str(format(len(subject), "09"))
+        message = protocol_version + message_type + length_of_subject + subject
+        self.sock.send(bytes(message, 'utf-8'))
+
+        # Wait for a short time to avoid sending too many messages in quick succession
         time.sleep(WAIT_TIME)
 
     def request_listen(self):
         while continue_listening:
-            if not self.receive_message():
-                return
             self.receive_message()
 
     def receive_message(self):
@@ -330,27 +341,18 @@ class OpenSpaceLayerArtist(LayerArtist):
 
                 break
 
+        will_send_message = False
     def clear(self):
         if self.sock is None:
             return
         if self._uuid is None:
             return
 
-        # Create and send "Remove Scene Graph Node" message to OS
-        message_type = "RSGN"
-        subject = self._uuid
-        length_of_subject = str(format(len(subject), "09"))
-
-        message = protocol_version + message_type + length_of_subject + subject
-        self.sock.send(bytes(message, 'utf-8'))
+        self.remove_scene_graph_node()
         self._uuid = None
 
-        # Wait for a short time to avoid sending too many messages in quick succession
-        time.sleep(WAIT_TIME)
 
     def update(self):
         if self.sock is None:
             return
         self._on_attribute_change(force=True)
-        self.receive_message()
-
