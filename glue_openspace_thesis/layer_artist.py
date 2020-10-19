@@ -35,6 +35,7 @@ continue_listening = True
 will_send_message = True
 has_luminosity_data = False
 has_velocity_data = False
+previous_state = 0
 
 
 class OpenSpaceLayerArtist(LayerArtist):
@@ -71,7 +72,7 @@ class OpenSpaceLayerArtist(LayerArtist):
     def _on_attribute_change(self, **kwargs):
 
         force = kwargs.get('force', False)
-        global will_send_message
+        global will_send_message, previous_state
 
         if self.sock is None:
             return
@@ -134,13 +135,28 @@ class OpenSpaceLayerArtist(LayerArtist):
                 self.sock.send(bytes(message, 'utf-8'))
                 print('Message sent: ', message)
                 time.sleep(WAIT_TIME)
+                return
+
+            if isinstance(self.state.layer, Subset):
+                if self.state.layer.subset_state is not previous_state:
+                    self.remove_scene_graph_node()
+                    self.get_data()
+                    self.add_scene_graph_node()
             return
 
         self.clear()
 
-        # if not self.state.visible:
-        #     return
+        if not self.state.visible:
+            return
 
+        self.get_data()
+        self.redraw()
+        self.add_scene_graph_node()
+
+        if isinstance(self.state.layer, Subset):
+            previous_state = self.state.layer.subset_state
+
+    def get_data(self):
         # Create string with coordinates for point data
         try:
             point_data = get_point_data(self.state.layer,
@@ -194,9 +210,6 @@ class OpenSpaceLayerArtist(LayerArtist):
             except Exception as exc:
                 print(str(exc))
                 return
-
-        self.redraw()
-        self.add_scene_graph_node()
 
     def add_scene_graph_node(self):
 
@@ -350,7 +363,8 @@ class OpenSpaceLayerArtist(LayerArtist):
 
                 break
 
-        will_send_message = False
+        time.sleep(WAIT_TIME)
+        will_send_message = True
         self.redraw()
 
     def clear(self):
