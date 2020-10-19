@@ -33,6 +33,8 @@ WAIT_TIME = 0.01
 protocol_version = "1"
 continue_listening = True
 will_send_message = True
+has_luminosity_data = False
+has_velocity_data = False
 
 
 class OpenSpaceLayerArtist(LayerArtist):
@@ -148,7 +150,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                                         alternative_unit=self._viewer_state.alt_unit,
                                         frame=self._viewer_state.frame)
             # Create and send a message to OS including the point data
-            DATA_message_type = "DATA"
+            DATA_message_type = "PDAT"
             DATA_subject = point_data
             DATA_length_of_subject = str(format(len(DATA_subject), "09"))
             DATA_message = protocol_version + DATA_message_type + DATA_length_of_subject + DATA_subject
@@ -162,7 +164,8 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         # If the point data has associated luminosity data set - send it to OS
-        if self._viewer_state.lum_att is not None:
+        # DOESN'T WORK! USED FOR TESTING FOR FUTURE WORK
+        if has_luminosity_data:
             try:
                 luminosity_data = get_luminosity_data(self.state.layer, self._viewer_state.lum_att)
                 LUMI_message_type = "LUMI"
@@ -170,13 +173,15 @@ class OpenSpaceLayerArtist(LayerArtist):
                 LUMI_length_of_subject = str(format(len(LUMI_subject), "09"))
                 LUMI_message = protocol_version + LUMI_message_type + LUMI_length_of_subject + LUMI_subject
                 self.sock.send(bytes(LUMI_message, 'utf-8'))
+                print('Messaged sent: ', LUMI_message)
                 time.sleep(WAIT_TIME)
             except Exception as exc:
                 print(str(exc))
                 return
 
         # If the point data has associated velocity data set - send it to OS
-        if self._viewer_state.vel_att is not None:
+        # DOESN'T WORK! USED FOR TESTING FOR FUTURE WORK
+        if has_velocity_data:
             try:
                 velocity_data = get_velocity_data(self.state.layer, self._viewer_state.vel_att)
                 VELO_message_type = "VELO"
@@ -184,6 +189,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 VELO_length_of_subject = str(format(len(VELO_subject), "09"))
                 VELO_message = protocol_version + VELO_message_type + VELO_length_of_subject + VELO_subject
                 self.sock.send(bytes(VELO_message, 'utf-8'))
+                print('Messaged sent: ', VELO_message)
                 time.sleep(WAIT_TIME)
             except Exception as exc:
                 print(str(exc))
