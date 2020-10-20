@@ -2,17 +2,17 @@ import os
 import time
 import socket
 
-from qtpy.QtWidgets import QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QPushButton, QWidget
-from qtpy.QtGui import QImage, QPixmap
 from qtpy.QtCore import Qt
+from qtpy.QtGui import QImage, QPixmap
+from qtpy.QtWidgets import QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QPushButton, QWidget
 
-from glue.viewers.common.qt.data_viewer import DataViewer
 from glue.utils.qt import messagebox_on_error
+from glue.viewers.common.qt.data_viewer import DataViewer
 
-from .layer_artist import OpenSpaceLayerArtist, protocol_version
 from .viewer_state import OpenSpaceViewerState
-from .layer_state_widget import OpenSpaceLayerStateWidget
+from .layer_artist import OpenSpaceLayerArtist, protocol_version
 from .viewer_state_widget import OpenSpaceViewerStateWidget
+from .layer_state_widget import OpenSpaceLayerStateWidget
 
 __all__ = ['OpenSpaceDataViewer']
 
@@ -70,9 +70,9 @@ class OpenSpaceDataViewer(DataViewer):
 
         # Create and send "Connection" message to OS
         message_type = "CONN"
-        software = "Glue-Viz"
-        length_of_software = str(format(len(software), "09"))
-        message = protocol_version + message_type + length_of_software + software
+        subject = "Glue-Viz"
+        length_of_subject = str(format(len(subject), "09"))
+        message = protocol_version + message_type + length_of_subject + subject
         self.socket.send(bytes(message, 'utf-8'))
 
     def get_layer_artist(self, cls, layer=None, layer_state=None):

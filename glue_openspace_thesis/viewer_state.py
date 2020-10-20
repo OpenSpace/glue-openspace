@@ -2,8 +2,8 @@ from __future__ import absolute_import, division, print_function
 
 from astropy import units as u
 
-from glue.external.echo import (ListCallbackProperty, SelectionCallbackProperty)
 from glue.core.data_combo_helper import ComponentIDComboHelper
+from glue.external.echo import (ListCallbackProperty, SelectionCallbackProperty)
 from glue.viewers.common.state import ViewerState
 
 MODES = ['Sky']

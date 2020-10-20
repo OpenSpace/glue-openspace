@@ -4,10 +4,9 @@ import time
 import shutil
 import tempfile
 import matplotlib
-
 import numpy as np
-from glue.core import Data, Subset
 
+from glue.core import Data, Subset
 from glue.viewers.common.layer_artist import LayerArtist
 
 from .layer_state import OpenSpaceLayerState
@@ -35,7 +34,7 @@ continue_listening = True
 will_send_message = True
 has_luminosity_data = False
 has_velocity_data = False
-previous_state = 0
+previous_subset_state = 0
 
 
 class OpenSpaceLayerArtist(LayerArtist):
@@ -61,18 +60,10 @@ class OpenSpaceLayerArtist(LayerArtist):
     def sock(self):
         return self._viewer.socket
 
-    # def _on_visible_change(self, value=None):
-    #     self.artist.set_visible(self.state.visible)
-    #     self.redraw()
-    #
-    # def _on_zorder_change(self, value=None):
-    #     self.artist.set_zorder(self.state.zorder)
-    #     self.redraw()
-
     def _on_attribute_change(self, **kwargs):
+        global will_send_message, previous_subset_state
 
         force = kwargs.get('force', False)
-        global will_send_message, previous_state
 
         if self.sock is None:
             return
@@ -89,8 +80,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         if self._uuid:
             if will_send_message is False:
                 return
-
-            self.redraw()
 
             message_type = ""
             subject = ""
@@ -135,26 +124,27 @@ class OpenSpaceLayerArtist(LayerArtist):
                 self.sock.send(bytes(message, 'utf-8'))
                 print('Message sent: ', message)
                 time.sleep(WAIT_TIME)
+                self.redraw()
                 return
 
+            # On reselect of subset data, remove old sgn and create a new one
             if isinstance(self.state.layer, Subset):
-                if self.state.layer.subset_state is not previous_state:
+                if self.state.layer.subset_state is not previous_subset_state:
                     self.remove_scene_graph_node()
                     self.get_data()
                     self.add_scene_graph_node()
+                    self.redraw()
             return
 
         self.clear()
 
-        if not self.state.visible:
-            return
+        # Store state of subset to track changes from reselection of subset
+        if isinstance(self.state.layer, Subset):
+            previous_subset_state = self.state.layer.subset_state
 
         self.get_data()
-        self.redraw()
         self.add_scene_graph_node()
-
-        if isinstance(self.state.layer, Subset):
-            previous_state = self.state.layer.subset_state
+        self.redraw()
 
     def get_data(self):
         # Create string with coordinates for point data
@@ -174,9 +164,6 @@ class OpenSpaceLayerArtist(LayerArtist):
             time.sleep(WAIT_TIME)
         except Exception as exc:
             print(str(exc))
-            return
-
-        if isinstance(self.state.layer, Subset) and np.sum(self.state.layer.to_mask()) == 0:
             return
 
         # If the point data has associated luminosity data set - send it to OS

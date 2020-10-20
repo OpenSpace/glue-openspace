@@ -21,7 +21,6 @@ class OpenSpaceLayerStateWidget(QWidget):
         fix_tab_widget_fontsize(self.ui.tab_widget)
 
         self.state = layer_artist.state
-
         self.layer_artist = layer_artist
         self.layer = layer_artist.layer
 

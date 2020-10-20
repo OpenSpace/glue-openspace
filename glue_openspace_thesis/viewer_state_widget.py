@@ -4,6 +4,7 @@ from qtpy.QtWidgets import QWidget
 
 from glue.external.echo.qt import autoconnect_callbacks_to_qt
 from glue.utils.qt import load_ui
+
 from .viewer_state import MODES_BODIES
 
 __all__ = ['OpenSpaceViewerStateWidget']
