@@ -89,7 +89,9 @@ class OpenSpaceLayerArtist(LayerArtist):
 
             if "alpha" in changed:
                 message_type = "UPOP"
-                value = str(round(self.state.alpha, 4))
+                # Round up to 7 decimals to avoid length_of_value being double digits
+                # since OpenSpace expects the length_of_value to be 1 byte of the subject
+                value = str((self.state.alpha, 7))
                 length_of_value = str(len(value))
                 subject = length_of_identifier + identifier + length_of_value + value
                 length_of_subject = str(format(len(subject), "09"))
