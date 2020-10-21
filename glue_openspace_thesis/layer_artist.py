@@ -29,7 +29,7 @@ shutil.copy(TEXTURE_ORIGIN, TEXTURE)
 # Time to wait after sending websocket message
 WAIT_TIME = 0.01
 
-protocol_version = "1"
+protocol_version = "1.0"
 continue_listening = True
 will_send_message = True
 has_luminosity_data = False
