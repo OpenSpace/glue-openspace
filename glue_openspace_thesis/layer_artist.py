@@ -4,7 +4,6 @@ import time
 import shutil
 import tempfile
 import matplotlib
-import numpy as np
 
 from glue.core import Data, Subset
 from glue.viewers.common.layer_artist import LayerArtist
@@ -214,7 +213,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         length_of_identifier = str(len(identifier))
         color = str(to_rgb(self.state.color))
         length_of_color = str(len(color))
-        opacity = str(round(self.state.alpha, 4))
+        opacity = str(round(self.state.alpha, 7))
         length_of_opacity = str(len(opacity))
         gui_name = self._display_name
         length_of_gui = str(len(gui_name))
