@@ -33,7 +33,6 @@ continue_listening = True
 will_send_message = True
 has_luminosity_data = False
 has_velocity_data = False
-previous_subset_state = 0
 
 
 class OpenSpaceLayerArtist(LayerArtist):
@@ -50,6 +49,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         self._uuid = None
         self._display_name = None
+        self._state = None
 
         self.threadCommsRx = Thread(target=self.request_listen)
         self.threadCommsRx.daemon = True
@@ -60,7 +60,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         return self._viewer.socket
 
     def _on_attribute_change(self, **kwargs):
-        global will_send_message, previous_subset_state
+        global will_send_message
 
         force = kwargs.get('force', False)
 
@@ -130,18 +130,20 @@ class OpenSpaceLayerArtist(LayerArtist):
 
             # On reselect of subset data, remove old sgn and create a new one
             if isinstance(self.state.layer, Subset):
-                if self.state.layer.subset_state is not previous_subset_state:
+                state = self.state.layer.subset_state
+                if state is not self._state:
+                    self._state = state
                     self.remove_scene_graph_node()
                     self.get_data()
                     self.add_scene_graph_node()
                     self.redraw()
-            return
+                return
 
         self.clear()
 
         # Store state of subset to track changes from reselection of subset
         if isinstance(self.state.layer, Subset):
-            previous_subset_state = self.state.layer.subset_state
+            self._state = self.state.layer.subset_state
 
         self.get_data()
         self.add_scene_graph_node()
@@ -237,6 +239,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         length_of_subject = str(format(len(subject), "09"))
         message = protocol_version + message_type + length_of_subject + subject
         self.sock.send(bytes(message, 'utf-8'))
+        print('Messaged sent: ', message)
 
         # Wait for a short time to avoid sending too many messages in quick succession
         time.sleep(WAIT_TIME)
