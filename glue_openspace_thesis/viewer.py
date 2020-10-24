@@ -58,8 +58,7 @@ class OpenSpaceDataViewer(DataViewer):
 
     @messagebox_on_error('An error occurred when trying to connect to OpenSpace:', sep=' ')
     def connect_to_openspace(self, *args):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-        self.socket = socket.create_connection(('localhost', 4700))
+        self.reset_socket()
         print('Connected to OpenSpace')
         self._button.setEnabled(False)
         self._button.setText('Connected')
@@ -74,6 +73,11 @@ class OpenSpaceDataViewer(DataViewer):
         length_of_subject = str(format(len(subject), "09"))
         message = protocol_version + message_type + length_of_subject + subject
         self.socket.send(bytes(message, 'utf-8'))
+
+    def reset_socket(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+        self.socket.settimeout(0.0)
+        self.socket = socket.create_connection(('localhost', 4700))
 
     def get_layer_artist(self, cls, layer=None, layer_state=None):
         return cls(self, self.state, layer=layer, layer_state=layer_state)
