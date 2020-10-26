@@ -14,7 +14,6 @@ class OpenSpaceLayerState(LayerState):
     alpha = CallbackProperty()
 
     size_mode = SelectionCallbackProperty(default_index=0)
-    size_scaling = CallbackProperty(1)
 
     color_mode = SelectionCallbackProperty(default_index=0)
     cmap_mode = color_mode

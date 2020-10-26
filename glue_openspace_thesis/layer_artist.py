@@ -60,6 +60,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         return self._viewer.socket
 
     def _on_attribute_change(self, **kwargs):
+
         global will_send_message
 
         force = kwargs.get('force', False)
@@ -76,7 +77,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         # If properties update in Glue, send message to OS with new values
-        if self._uuid:
+        if self._uuid is not None:
             if will_send_message is False:
                 return
 
@@ -366,7 +367,6 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         self.remove_scene_graph_node()
         self._uuid = None
-
         self.redraw()
 
     def update(self):
