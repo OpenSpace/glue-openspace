@@ -246,16 +246,20 @@ class OpenSpaceLayerArtist(LayerArtist):
         time.sleep(WAIT_TIME)
 
     def request_listen(self):
+        global continue_listening
+        print("Starting request_listen")
         while continue_listening:
-            if self.sock is None:
-                return
+            while self.sock is None:
+                time.sleep(1.0);
             self.receive_message()
+            time.sleep(0.1)
 
     def receive_message(self):
-
         global will_send_message
-
-        message_received = self.sock.recv(4096).decode('ascii')
+        try:
+            message_received = self.sock.recv(4096).decode('ascii')
+        except:
+            return
         print('Received message from socket: ', message_received)
 
         # Start and end are message offsets
