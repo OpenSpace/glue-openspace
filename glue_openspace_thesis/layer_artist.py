@@ -9,7 +9,7 @@ from glue.core import Data, Subset
 from glue.viewers.common.layer_artist import LayerArtist
 
 from .layer_state import OpenSpaceLayerState
-from .utils import get_point_data, get_luminosity_data, get_velocity_data
+from .utils import get_point_data
 
 from threading import Thread
 from matplotlib.colors import ColorConverter
@@ -121,6 +121,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 subject = length_of_identifier + identifier + value
                 length_of_subject = str(format(len(subject), "09"))
 
+            # Send the correct message to OpenSpace
             if subject:
                 message = protocol_version + message_type + length_of_subject + subject
                 self.sock.send(bytes(message, 'utf-8'))
@@ -129,14 +130,13 @@ class OpenSpaceLayerArtist(LayerArtist):
                 self.redraw()
                 return
 
-            # On reselect of subset data, remove old sgn and create a new one
+            # On reselect of subset data, remove old scene graph node and resend data
             if isinstance(self.state.layer, Subset):
                 state = self.state.layer.subset_state
                 if state is not self._state:
                     self._state = state
                     self.remove_scene_graph_node()
-                    self.get_data()
-                    self.add_scene_graph_node()
+                    self.send_point_data()
                     self.redraw()
                 return
 
@@ -146,98 +146,72 @@ class OpenSpaceLayerArtist(LayerArtist):
         if isinstance(self.state.layer, Subset):
             self._state = self.state.layer.subset_state
 
-        self.get_data()
-        self.add_scene_graph_node()
+        self.send_point_data()
         self.redraw()
 
-    def get_data(self):
+    # Create and send a message including the point data to OpenSpace
+    def send_point_data(self):
         # Create string with coordinates for point data
         try:
+            message_type = "PDAT"
+
+            # Create a random identifier
+            self._uuid = str(uuid.uuid4())
+            if isinstance(self.state.layer, Data):
+                self._display_name = self.state.layer.label
+            else:
+                self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
+
+            identifier = self._uuid
+            length_of_identifier = str(len(identifier))
+
+            color = str(to_rgb(self.state.color))
+            length_of_color = str(len(color))
+
+            opacity = str(round(self.state.alpha, 7))
+            length_of_opacity = str(len(opacity))
+
+            gui_name = self._display_name
+            length_of_gui = str(len(gui_name))
+
+            size = str(self.state.size)
+            length_of_size = str(len(size))
+
             point_data = get_point_data(self.state.layer,
                                         self._viewer_state.lon_att,
                                         self._viewer_state.lat_att,
                                         alternative_attribute=self._viewer_state.alt_att,
                                         alternative_unit=self._viewer_state.alt_unit,
                                         frame=self._viewer_state.frame)
-            # Create and send a message to OS including the point data
-            DATA_message_type = "PDAT"
-            DATA_subject = point_data
-            DATA_length_of_subject = str(format(len(DATA_subject), "09"))
-            DATA_message = protocol_version + DATA_message_type + DATA_length_of_subject + DATA_subject
-            self.sock.send(bytes(DATA_message, 'utf-8'))
+
+            subject = (
+                length_of_identifier + identifier +
+                length_of_color + color +
+                length_of_opacity + opacity +
+                length_of_size + size +
+                length_of_gui + gui_name +
+                point_data
+            )
+            length_of_subject = str(format(len(subject), "09"))
+
+            message = protocol_version + message_type + length_of_subject + subject
+
+            self.sock.send(bytes(message, 'utf-8'))
+
+            # Wait for a short time to avoid sending too many messages in quick succession
             time.sleep(WAIT_TIME)
+
         except Exception as exc:
             print(str(exc))
             return
 
-        # If the point data has associated luminosity data set - send it to OS
-        # DOESN'T WORK! USED FOR TESTING FOR FUTURE WORK
-        if has_luminosity_data:
-            try:
-                luminosity_data = get_luminosity_data(self.state.layer, self._viewer_state.lum_att)
-                LUMI_message_type = "LUMI"
-                LUMI_subject = luminosity_data
-                LUMI_length_of_subject = str(format(len(LUMI_subject), "09"))
-                LUMI_message = protocol_version + LUMI_message_type + LUMI_length_of_subject + LUMI_subject
-                self.sock.send(bytes(LUMI_message, 'utf-8'))
-                print('Messaged sent: ', LUMI_message)
-                time.sleep(WAIT_TIME)
-            except Exception as exc:
-                print(str(exc))
-                return
-
-        # If the point data has associated velocity data set - send it to OS
-        # DOESN'T WORK! USED FOR TESTING FOR FUTURE WORK
-        if has_velocity_data:
-            try:
-                velocity_data = get_velocity_data(self.state.layer, self._viewer_state.vel_att)
-                VELO_message_type = "VELO"
-                VELO_subject = velocity_data
-                VELO_length_of_subject = str(format(len(VELO_subject), "09"))
-                VELO_message = protocol_version + VELO_message_type + VELO_length_of_subject + VELO_subject
-                self.sock.send(bytes(VELO_message, 'utf-8'))
-                print('Messaged sent: ', VELO_message)
-                time.sleep(WAIT_TIME)
-            except Exception as exc:
-                print(str(exc))
-                return
-
-    def add_scene_graph_node(self):
-
-        # Create a random identifier
-        self._uuid = str(uuid.uuid4())
-        if isinstance(self.state.layer, Data):
-            self._display_name = self.state.layer.label
-        else:
-            self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
-
-        # Create an "Add Scene Graph Message" and send it to OS
-        identifier = self._uuid
-        length_of_identifier = str(len(identifier))
-        color = str(to_rgb(self.state.color))
-        length_of_color = str(len(color))
-        opacity = str(round(self.state.alpha, 7))
-        length_of_opacity = str(len(opacity))
-        gui_name = self._display_name
-        length_of_gui = str(len(gui_name))
-        size = str(self.state.size)
-        length_of_size = str(len(size))
-        subject = length_of_identifier + identifier + length_of_color + color + length_of_opacity + opacity + length_of_size + size + length_of_gui + gui_name
-        length_of_subject = str(format(len(subject), "09"))
-
-        message_type = "ASGN"
-        message = protocol_version + message_type + length_of_subject + subject
-        self.sock.send(bytes(message, 'utf-8'))
-        print('Messaged sent: ', message)
-
-        # Wait for a short time to avoid sending too many messages in quick succession
-        time.sleep(WAIT_TIME)
-
     def remove_scene_graph_node(self):
         # Create and send "Remove Scene Graph Node" message to OS
         message_type = "RSGN"
+
         subject = self._uuid
         length_of_subject = str(format(len(subject), "09"))
+
         message = protocol_version + message_type + length_of_subject + subject
         self.sock.send(bytes(message, 'utf-8'))
         print('Messaged sent: ', message)
@@ -289,6 +263,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         for layer in self._viewer.layers:
             if layer._uuid == identifier:
 
+                # Update Color
                 if message_type == "UPCO":
                     length_of_value = int(subject[start:end])
                     start = end
@@ -325,6 +300,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                     layer.state.color = UPCO_value
                     break
 
+                # Update Opacity
                 if message_type == "UPOP":
                     length_of_value = int(subject[start:end])
                     start = end
@@ -336,6 +312,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                     layer.state.alpha = UPOP_value
                     break
 
+                # Update Size
                 if message_type == "UPSI":
                     length_of_value = int(subject[start:end])
                     start = end
@@ -347,6 +324,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                     layer.state.size = UPSI_value
                     break
 
+                # Toggle Visibility
                 if message_type == "TOVI":
                     TOVI_value = subject[start]
                     will_send_message = False
