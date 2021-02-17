@@ -64,15 +64,17 @@ class OpenSpaceDataViewer(DataViewer):
         self._button.setText('Connected')
         time.sleep(WAIT_TIME)
 
-        for layer in self.layers:
-            layer.update()
-
         # Create and send "Connection" message to OS
         message_type = "CONN"
         subject = "Glue-Viz"
         length_of_subject = str(format(len(subject), "09"))
         message = protocol_version + message_type + length_of_subject + subject
         self.socket.send(bytes(message, 'utf-8'))
+        time.sleep(WAIT_TIME)
+
+        # Update layers to trigger sending of data
+        for layer in self.layers:
+            layer.update()
 
     def reset_socket(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
