@@ -39,6 +39,7 @@ class OpenSpaceLayerArtist(LayerArtist):
     _layer_state_cls = OpenSpaceLayerState
 
     def __init__(self, viewer, *args, **kwargs):
+
         super(OpenSpaceLayerArtist, self).__init__(*args, **kwargs)
 
         self._viewer = viewer
@@ -59,15 +60,15 @@ class OpenSpaceLayerArtist(LayerArtist):
         return self._viewer.socket
 
     def _on_attribute_change(self, **kwargs):
+
         global will_send_message
 
         force = kwargs.get('force', False)
 
-        noSocket = self.sock is None
-        noCoordinates = (self._viewer_state.lon_att is None
-                         or self._viewer_state.lat_att is None)
+        if self.sock is None:
+            return
 
-        if noSocket or noCoordinates:
+        if self._viewer_state.lon_att is None or self._viewer_state.lat_att is None:
             return
 
         changed = self.pop_changed_properties()
@@ -75,130 +76,134 @@ class OpenSpaceLayerArtist(LayerArtist):
         if len(changed) == 0 and not force:
             return
 
-        # Not given an ID => not yet created. So send the point data to OpenSpace
-        if self._uuid is None:
-            # Store state of subset to track changes from reselection of subset
-            if isinstance(self.state.layer, Subset):
-                self._state = self.state.layer.subset_state
-
-            self.send_point_data()
-            self.redraw()
-            return
-
-        if will_send_message is False:
-            return
-
         # If properties update in Glue, send message to OS with new values
-        self.send_property_changed(changed)
-        
-        # On reselect of subset data, remove old scene graph node and resend data
-        if isinstance(self.state.layer, Subset):
-            state = self.state.layer.subset_state
-            if state is not self._state:
-                self._state = state
-                self.remove_scene_graph_node()
-                self.send_point_data()
-                self.redraw()
-            return
-
-    def send_property_changed(self, changedProperty):
-        message_type = ""
-        subject = ""
-        length_of_subject = ""
-        identifier = self._uuid
-        length_of_identifier = str(len(identifier))
-
-        if "alpha" in changedProperty:
-            message_type = "UPOP"
-            # Round up to 7 decimals to avoid length_of_value being double digits
-            # since OpenSpace expects the length_of_value to be 1 byte of the subject
-            value = str(round(self.state.alpha, 7))
-            length_of_value = str(len(value))
-            subject = length_of_identifier + identifier + length_of_value + value
-            length_of_subject = str(format(len(subject), "09"))
-
-        elif "color" in changedProperty:
-            message_type = "UPCO"
-            value = str(to_rgb(self.state.color))
-            length_of_value = str(len(value))
-            subject = length_of_identifier + identifier + length_of_value + value
-            length_of_subject = str(format(len(subject), "09"))
-
-        elif "size" in changedProperty:
-            message_type = "UPSI"
-            value = str(self.state.size)
-            length_of_value = str(len(value))
-            subject = length_of_identifier + identifier + length_of_value + value
-            length_of_subject = str(format(len(subject), "09"))
-
-        elif "visible" in changedProperty:
-            message_type = "TOVI"
-            if self.state.visible is False:
-                value = "F"
-            elif self.state.visible is True:
-                value = "T"
-            else:
+        if self._uuid is not None:
+            if will_send_message is False:
                 return
-            subject = length_of_identifier + identifier + value
-            length_of_subject = str(format(len(subject), "09"))
 
-        if subject:
-            message = protocol_version + message_type + length_of_subject + subject
-            self.sock.send(bytes(message, 'utf-8'))
-            print('Message sent: ', message)
-            time.sleep(WAIT_TIME)
-            self.redraw()
-            return
+            message_type = ""
+            subject = ""
+            length_of_subject = ""
+            identifier = self._uuid
+            length_of_identifier = str(len(identifier))
+
+            if "alpha" in changed:
+                message_type = "UPOP"
+                # Round up to 7 decimals to avoid length_of_value being double digits
+                # since OpenSpace expects the length_of_value to be 1 byte of the subject
+                value = str(round(self.state.alpha, 7))
+                length_of_value = str(len(value))
+                subject = length_of_identifier + identifier + length_of_value + value
+                length_of_subject = str(format(len(subject), "09"))
+
+            elif "color" in changed:
+                message_type = "UPCO"
+                value = str(to_rgb(self.state.color))
+                length_of_value = str(len(value))
+                subject = length_of_identifier + identifier + length_of_value + value
+                length_of_subject = str(format(len(subject), "09"))
+
+            elif "size" in changed:
+                message_type = "UPSI"
+                value = str(self.state.size)
+                length_of_value = str(len(value))
+                subject = length_of_identifier + identifier + length_of_value + value
+                length_of_subject = str(format(len(subject), "09"))
+
+            elif "visible" in changed:
+                message_type = "TOVI"
+                if self.state.visible is False:
+                    value = "F"
+                elif self.state.visible is True:
+                    value = "T"
+                else:
+                    return
+                subject = length_of_identifier + identifier + value
+                length_of_subject = str(format(len(subject), "09"))
+
+            # Send the correct message to OpenSpace
+            if subject:
+                message = protocol_version + message_type + length_of_subject + subject
+                self.sock.send(bytes(message, 'utf-8'))
+                print('Message sent: ', message)
+                time.sleep(WAIT_TIME)
+                self.redraw()
+                return
+
+            # On reselect of subset data, remove old scene graph node and resend data
+            if isinstance(self.state.layer, Subset):
+                state = self.state.layer.subset_state
+                if state is not self._state:
+                    self._state = state
+                    self.remove_scene_graph_node()
+                    self.send_point_data()
+                    self.redraw()
+                return
+
+        self.clear()
+
+        # Store state of subset to track changes from reselection of subset
+        if isinstance(self.state.layer, Subset):
+            self._state = self.state.layer.subset_state
+
+        self.send_point_data()
+        self.redraw()
 
     # Create and send a message including the point data to OpenSpace
     def send_point_data(self):
-        message_type = "PDAT"
+        # Create string with coordinates for point data
+        try:
+            message_type = "PDAT"
 
-        # Create a random identifier
-        self._uuid = str(uuid.uuid4())
-        if isinstance(self.state.layer, Data):
-            self._display_name = self.state.layer.label
-        else:
-            self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
+            # Create a random identifier
+            self._uuid = str(uuid.uuid4())
+            if isinstance(self.state.layer, Data):
+                self._display_name = self.state.layer.label
+            else:
+                self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
 
-        identifier = self._uuid
-        length_of_identifier = str(len(identifier))
+            identifier = self._uuid
+            length_of_identifier = str(len(identifier))
 
-        color = str(to_rgb(self.state.color))
-        length_of_color = str(len(color))
+            color = str(to_rgb(self.state.color))
+            length_of_color = str(len(color))
 
-        opacity = str(round(self.state.alpha, 7))
-        length_of_opacity = str(len(opacity))
+            opacity = str(round(self.state.alpha, 7))
+            length_of_opacity = str(len(opacity))
 
-        gui_name = self._display_name
-        length_of_gui = str(len(gui_name))
+            gui_name = self._display_name
+            length_of_gui = str(len(gui_name))
 
-        size = str(self.state.size)
-        length_of_size = str(len(size))
+            size = str(self.state.size)
+            length_of_size = str(len(size))
 
-        point_data = get_point_data(self.state.layer,
-                                    self._viewer_state.lon_att,
-                                    self._viewer_state.lat_att,
-                                    alternative_attribute=self._viewer_state.alt_att,
-                                    alternative_unit=self._viewer_state.alt_unit,
-                                    frame=self._viewer_state.frame)
+            point_data = get_point_data(self.state.layer,
+                                        self._viewer_state.lon_att,
+                                        self._viewer_state.lat_att,
+                                        alternative_attribute=self._viewer_state.alt_att,
+                                        alternative_unit=self._viewer_state.alt_unit,
+                                        frame=self._viewer_state.frame)
 
-        subject = (
-            length_of_identifier + identifier +
-            length_of_color + color +
-            length_of_opacity + opacity +
-            length_of_size + size +
-            length_of_gui + gui_name +
-            point_data
-        )
-        length_of_subject = str(format(len(subject), "09"))
+            subject = (
+                length_of_identifier + identifier +
+                length_of_color + color +
+                length_of_opacity + opacity +
+                length_of_size + size +
+                length_of_gui + gui_name +
+                point_data
+            )
+            length_of_subject = str(format(len(subject), "09"))
 
-        message = protocol_version + message_type + length_of_subject + subject
+            message = protocol_version + message_type + length_of_subject + subject
 
-        self.sock.send(bytes(message, 'utf-8'))
+            self.sock.send(bytes(message, 'utf-8'))
 
-        # Wait for a short time to avoid sending too many messages in quick succession
-        time.sleep(WAIT_TIME)
+            # Wait for a short time to avoid sending too many messages in quick succession
+            time.sleep(WAIT_TIME)
+
+        except Exception as exc:
+            print(str(exc))
+            return
 
     def remove_scene_graph_node(self):
         # Create and send "Remove Scene Graph Node" message to OS
@@ -219,7 +224,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         print("Starting request_listen")
         while continue_listening:
             while self.sock is None:
-                time.sleep(1.0)
+                time.sleep(1.0);
             self.receive_message()
             time.sleep(0.1)
 
