@@ -1,8 +1,14 @@
 from astropy import units as u
 from astropy.coordinates import SkyCoord
+import time
 
-__all__ = ['get_point_data', 'get_luminosity_data', 'get_velocity_data']
 
+__all__ = ['get_point_data', 'protocol_version', 'send_simp_message', 'WAIT_TIME']
+# , 'get_luminosity_data', 'get_velocity_data'
+
+
+protocol_version = "1.0"
+WAIT_TIME = 0.01 # Time to wait after sending websocket message
 
 def get_point_data(data, longitude_attribute, latitude_attribute, alternative_attribute=None,
                    frame=None, alternative_unit=None):
@@ -79,3 +85,23 @@ def get_point_data(data, longitude_attribute, latitude_attribute, alternative_at
 
 #     velocity_data_string = length_velocity_data + velocity_data
 #      return velocity_data_string
+
+
+# @messagebox_on_error('An error occurred when trying to send a message to OpenSpace:', sep=' ')
+def send_simp_message(socket, message_type, subject=''):
+    time.sleep(WAIT_TIME)
+    length_of_subject = str(format(len(subject), '09')) # formats to a 9-bit string
+    message = protocol_version + message_type + length_of_subject + subject
+    
+    if len(message) > 115:
+        print(f'Sending SIMP message \"{message[0:90]}...\"')
+    else:
+        print(f'Sending SIMP message \"{message}\"')
+
+    socket.send(bytes(message, 'utf-8'))
+   
+    # Wait for a short time to avoid sending too many messages in quick succession
+    time.sleep(WAIT_TIME)
+
+    # self.ghetto_log.setText(f'mess_type: {message_type}, len_sub: {length_of_subject}, type(length_of_subject): {type(length_of_subject)}, type(protocol_version): {type(protocol_version)}')
+    # self.ghetto_log2.setText(f'message: {message}. (protocol_version, message_type, length_of_subject, subject): ({protocol_version}, {message_type}, {length_of_subject}, {subject})')

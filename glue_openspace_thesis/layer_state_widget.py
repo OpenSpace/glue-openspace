@@ -40,6 +40,7 @@ class OpenSpaceLayerStateWidget(QWidget):
         self.ui.button_center.setVisible(False)
 
     def _update_size_mode(self, *args):
+        self.state.size = 10
 
         if self.state.size_mode == "Fixed":
             self.ui.size_row_2.hide()
@@ -51,6 +52,7 @@ class OpenSpaceLayerStateWidget(QWidget):
             self.ui.size_row_2.show()
 
     def _update_color_mode(self, *args):
+        self.state.color = '#00ff00'
 
         if self.state.color_mode == "Fixed":
             self.ui.color_row_2.hide()
