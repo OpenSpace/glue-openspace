@@ -28,11 +28,6 @@ TEXTURE_ORIGIN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.p
 TEXTURE = tempfile.mktemp(suffix='.png')
 shutil.copy(TEXTURE_ORIGIN, TEXTURE)
 
-# TODO: Change these to private
-will_send_message = True
-has_luminosity_data = False
-has_velocity_data = False
-
 class MessageType(str, Enum):
     CONN = 'CONN'
     DISC = 'DISC'
@@ -45,8 +40,6 @@ class MessageType(str, Enum):
 
 class OpenSpaceLayerArtist(LayerArtist):
     _layer_state_cls = OpenSpaceLayerState
-
-    # socket = None
 
     def __init__(self, viewer, *args, **kwargs):
 
@@ -69,6 +62,9 @@ class OpenSpaceLayerArtist(LayerArtist):
         self._threadCommsRx = None
 
         self._is_connected = False
+        self.will_send_message = True
+        # self.has_luminosity_data = False
+        # self.has_velocity_data = False
 
     def start_socket_thread(self):
         if (self._threadCommsRx == None) or (not self._threadCommsRx.is_alive()): 
@@ -98,8 +94,6 @@ class OpenSpaceLayerArtist(LayerArtist):
                 self.shutdown_connection()
 
     def _on_attribute_change(self, **kwargs):
-
-        global will_send_message
         
         force = kwargs.get('force', False)
 
@@ -116,39 +110,35 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         # If properties update in Glue, send message to OS with new values
         if self._uuid is not None:
-            if will_send_message is False:
+            if self.will_send_message is False:
                 return
 
             message_type = ""
             subject = ""
             identifier = self._uuid
             length_of_identifier = str(len(identifier))
-            
+
             if "alpha" in changed:
-                message_type = MessageType.UPOP #"UPOP"
+                message_type = MessageType.UPOP
                 # Round up to 7 decimals to avoid length_of_value being double digits
                 # since OpenSpace expects the length_of_value to be 1 byte of the subject
                 value = str(round(self.state.alpha, 7))
                 length_of_value = str(len(value))
                 subject = length_of_identifier + identifier + length_of_value + value
 
-            # TODO: Don't think this is ever used. A new PDAT message is called instead of updating the color
-            # elif "color" in changed:
-            #     message_type = MessageType.UPCO #"UPCO"
-            #     print(f'message_type={message_type}, MessageType.UPCO={MessageType.UPCO}')
-            #     value = str(to_rgb(self.state.color))
-            #     length_of_value = str(len(value))
-            #     subject = length_of_identifier + identifier + length_of_value + value
+            elif "color" in changed:
+                message_type = MessageType.UPCO
+                value = str(to_rgb(self.state.color))
+                length_of_value = str(len(value))
+                subject = length_of_identifier + identifier + length_of_value + value
 
             elif "size" in changed:
-                # print(f'UPDATING SIZE')
                 message_type = MessageType.UPSI
                 value = str(self.state.size)
                 length_of_value = str(len(value))
                 subject = length_of_identifier + identifier + length_of_value + value
 
             elif "visible" in changed:
-                # print(f'UPDATING VISABILITY')
                 message_type = MessageType.TOVI
                 if self.state.visible is False:
                     value = "F"
@@ -174,7 +164,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                     self.redraw()
                 return
 
-        self.clear()
+        self.clear()    # TODO: WHY?
 
         # Store state of subset to track changes from reselection of subset
         if isinstance(self.state.layer, Subset):
@@ -206,7 +196,14 @@ class OpenSpaceLayerArtist(LayerArtist):
             length_of_opacity = str(len(opacity))
 
             gui_name = self._display_name
-            length_of_gui = str(len(gui_name))
+            length_gui_name = str(len(gui_name))
+
+            # If Length of GUI name can be max 2 bytes (2 numbers)
+            if len(gui_name) > 99:
+                gui_name = gui_name[:(99-3)] + '...'
+                length_gui_name = str(len(gui_name))
+                print(f'length_gui_name={length_gui_name}')
+                # Inform user of cut GUI name length via popup or something
 
             size = str(self.state.size)
             length_of_size = str(len(size))
@@ -218,14 +215,17 @@ class OpenSpaceLayerArtist(LayerArtist):
                                         alternative_unit=self._viewer_state.alt_unit,
                                         frame=self._viewer_state.frame)
 
+            print(f'len(point_data)={len(point_data)}')
+
             subject = (
                 length_of_identifier + identifier +
                 length_of_color + color +
                 length_of_opacity + opacity +
                 length_of_size + size +
-                length_of_gui + gui_name +
+                length_gui_name + gui_name +
                 point_data
             )
+            print(f'length_gui_name={length_gui_name}')
             send_simp_message(self._socket, message_type, subject)
 
         except Exception as exc:
@@ -247,7 +247,6 @@ class OpenSpaceLayerArtist(LayerArtist):
 
     def receive_message(self):
 
-        global will_send_message
         try:
             message_received = self._socket.recv(4096).decode('ascii')
         except:
@@ -317,7 +316,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
                     UPCO_value = to_hex([r, g, b])
 
-                    will_send_message = False
+                    self.will_send_message = False
                     layer.state.color = UPCO_value
                     break
 
@@ -329,7 +328,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
                     UPOP_value = float(subject[start:end])
 
-                    will_send_message = False
+                    self.will_send_message = False
                     layer.state.alpha = UPOP_value
                     break
 
@@ -341,14 +340,14 @@ class OpenSpaceLayerArtist(LayerArtist):
 
                     UPSI_value = float(subject[start:end])
 
-                    will_send_message = False
+                    self.will_send_message = False
                     layer.state.size = UPSI_value
                     break
 
                 # Toggle Visibility
                 if message_type == MessageType.TOVI: #"TOVI":
                     TOVI_value = subject[start]
-                    will_send_message = False
+                    self.will_send_message = False
 
                     # TODO: CHANGE ORDER
                     if TOVI_value == "F":
@@ -360,7 +359,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 break
 
         time.sleep(WAIT_TIME) # TODO: Is this needed?
-        will_send_message = True
+        self.will_send_message = True
         self.redraw()
 
     def clear(self):
