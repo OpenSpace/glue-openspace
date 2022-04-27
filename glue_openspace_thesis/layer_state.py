@@ -3,6 +3,8 @@ from __future__ import absolute_import, division, print_function
 from glue.external.echo import (CallbackProperty, SelectionCallbackProperty, keep_in_sync)
 from glue.viewers.common.state import LayerState
 
+from glue.core.data_combo_helper import ComponentIDComboHelper
+
 __all__ = ['OpenSpaceLayerState']
 
 
@@ -15,8 +17,12 @@ class OpenSpaceLayerState(LayerState):
 
     size_mode = SelectionCallbackProperty(default_index=0)
 
-    color_mode = SelectionCallbackProperty(default_index=0)
+    # color_mode = SelectionCallbackProperty(default_index=0)
+    color_mode = SelectionCallbackProperty(docstring="Whether to use color to encode an attribute")
     cmap_mode = color_mode
+
+    cmap_att = SelectionCallbackProperty(docstring="The attribute to use for the color")
+    
 
     def __init__(self, layer=None, **kwargs):
 
@@ -32,8 +38,19 @@ class OpenSpaceLayerState(LayerState):
         self.size = self.layer.style.markersize
         self.alpha = self.layer.style.alpha
 
-        OpenSpaceLayerState.color_mode.set_choices(self, ['Fixed'])
+        OpenSpaceLayerState.color_mode.set_choices(self, ['Fixed', 'Linear'])
         OpenSpaceLayerState.size_mode.set_choices(self, ['Fixed'])
+
+        self.cmap_att_helper = ComponentIDComboHelper(self, 'cmap_att',
+                                                     numeric=True,
+                                                     categorical=False,
+                                                     world_coord=True,
+                                                     pixel_coord=False)
+        
+        
+        self.add_callback('layer', self._on_layer_change)
+        if layer is not None:
+            self._on_layer_change()
 
         self.update_from_dict(kwargs)
 
@@ -47,3 +64,11 @@ class OpenSpaceLayerState(LayerState):
         if self.layer is not None:
             self.size = self.layer.style.markersize
             self._sync_markersize = keep_in_sync(self, 'size', self.layer.style, 'markersize')
+
+    # loads the columns into the cmap attributes 
+    def _on_layer_change(self, layer=None):
+        # with delay_callback(self, 'cmap_vmin', 'cmap_vmax'):
+        if self.layer is None:
+            self.cmap_att_helper.set_multiple_data([])
+        else:
+            self.cmap_att_helper.set_multiple_data([self.layer])

@@ -37,7 +37,7 @@ class OpenSpaceLayerStateWidget(QWidget):
 
         self._viewer_state = layer_artist._viewer_state
 
-        self.ui.button_center.setVisible(False)
+        # self.ui.button_center.setVisible(False) # Never used
 
     def _update_size_mode(self, *args):
         self.state.size = 10
@@ -54,15 +54,23 @@ class OpenSpaceLayerStateWidget(QWidget):
     def _update_color_mode(self, *args):
         self.state.color = '#00ff00'
 
-        if self.state.color_mode == "Fixed":
-            self.ui.color_row_2.hide()
-            self.ui.color_row_3.hide()
+        if self.state.color_mode == 'Fixed':
+            self.ui.label_cmap_attribute.hide()
             self.ui.combosel_cmap_att.hide()
-            self.ui.spacer_color_label.show()
+            self.ui.label_cmap_limits.hide()
+            self.ui.valuetext_cmap_vmin.hide()
+            self.ui.valuetext_cmap_vmax.hide()
+            self.ui.button_flip_cmap.hide()
+            self.ui.combodata_cmap.hide()
+            self.ui.label_colormap.hide()
             self.ui.color_color.show()
-        else:
-            self.ui.color_color.hide()
+        if self.state.color_mode == 'Linear':
+            self.ui.label_cmap_attribute.show()
             self.ui.combosel_cmap_att.show()
-            self.ui.spacer_color_label.hide()
-            self.ui.color_row_2.show()
-            self.ui.color_row_3.show()
+            self.ui.label_cmap_limits.show()
+            self.ui.valuetext_cmap_vmin.show()
+            self.ui.valuetext_cmap_vmax.show()
+            self.ui.button_flip_cmap.show()
+            self.ui.combodata_cmap.show()
+            self.ui.label_colormap.show()
+            self.ui.color_color.hide()
