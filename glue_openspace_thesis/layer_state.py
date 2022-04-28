@@ -18,11 +18,12 @@ class OpenSpaceLayerState(LayerState):
     size_mode = SelectionCallbackProperty(default_index=0)
 
     # color_mode = SelectionCallbackProperty(default_index=0)
-    color_mode = SelectionCallbackProperty(docstring="Whether to use color to encode an attribute")
-    cmap_mode = color_mode
-
+    cmap_mode = SelectionCallbackProperty(docstring="Whether to use color to encode an attribute")
     cmap_att = SelectionCallbackProperty(docstring="The attribute to use for the color")
     
+    # cmap_vmin = SelectionCallbackProperty(docstring="The lower level for the colormap")
+    # cmap_vmax = SelectionCallbackProperty(docstring="The upper level for the colormap")
+
 
     def __init__(self, layer=None, **kwargs):
 
@@ -38,7 +39,7 @@ class OpenSpaceLayerState(LayerState):
         self.size = self.layer.style.markersize
         self.alpha = self.layer.style.alpha
 
-        OpenSpaceLayerState.color_mode.set_choices(self, ['Fixed', 'Linear'])
+        OpenSpaceLayerState.cmap_mode.set_choices(self, ['Fixed', 'Linear'])
         OpenSpaceLayerState.size_mode.set_choices(self, ['Fixed'])
 
         self.cmap_att_helper = ComponentIDComboHelper(self, 'cmap_att',
@@ -46,7 +47,12 @@ class OpenSpaceLayerState(LayerState):
                                                      categorical=False,
                                                      world_coord=True,
                                                      pixel_coord=False)
-        
+        # self.limits_cache = {}
+        # self.cmap_lim_helper = ComponentIDComboHelper(self, attribute='cmap_att',
+        #                                                   lower='cmap_vmin', 
+        #                                                   upper='cmap_vmax',
+        #                                                   limits_cache=self.limits_cache)
+
         
         self.add_callback('layer', self._on_layer_change)
         if layer is not None:
