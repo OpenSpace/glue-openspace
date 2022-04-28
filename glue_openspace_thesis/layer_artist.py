@@ -128,27 +128,23 @@ class OpenSpaceLayerArtist(LayerArtist):
 
             message_type = ""
             subject = ""
-            identifier = self._uuid
-            length_of_identifier = str(len(identifier))
+            identifier, length_of_identifier = self.get_identifier_str()
 
+            # TODO: Change so it only sends message on release of slider
+            # Now it sends a message with every move of the slider
             if "alpha" in changed:
                 message_type = MessageType.UPOP
-                # Round up to 7 decimals to avoid length_of_value being double digits
-                # since OpenSpace expects the length_of_value to be 1 byte of the subject
-                value = str(round(self.state.alpha, 7))
-                length_of_value = str(len(value))
+                value, length_of_value = self.get_opacity_str()
                 subject = length_of_identifier + identifier + length_of_value + value
 
             elif "color" in changed:
                 message_type = MessageType.UPCO
-                value = str(to_rgb(self.state.color))
-                length_of_value = str(len(value))
+                value, length_of_value = self.get_color_str()
                 subject = length_of_identifier + identifier + length_of_value + value
 
             elif "size" in changed:
                 message_type = MessageType.UPSI
-                value = str(self.state.size)
-                length_of_value = str(len(value))
+                value, length_of_value = self.get_size_str()
                 subject = length_of_identifier + identifier + length_of_value + value
 
             elif "visible" in changed:
@@ -160,6 +156,8 @@ class OpenSpaceLayerArtist(LayerArtist):
                 else:
                     return
                 subject = length_of_identifier + identifier + value
+
+            # TODO: Setup for GUI name change
 
             # Send the correct message to OpenSpace
             if subject:
@@ -199,27 +197,11 @@ class OpenSpaceLayerArtist(LayerArtist):
             else:
                 self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
 
-            identifier = self._uuid
-            length_of_identifier = str(len(identifier))
-
-            color = str(to_rgb(self.state.color))
-            length_of_color = str(len(color))
-
-            opacity = str(round(self.state.alpha, 7))
-            length_of_opacity = str(len(opacity))
-
-            gui_name = self._display_name
-            length_gui_name = str(len(gui_name))
-
-            # If Length of GUI name can be max 2 bytes (2 numbers)
-            if len(gui_name) > 99:
-                gui_name = gui_name[:(99-3)] + '...'
-                length_gui_name = str(len(gui_name))
-                print(f'length_gui_name={length_gui_name}')
-                # Inform user of cut GUI name length via popup or something
-
-            size = str(self.state.size)
-            length_of_size = str(len(size))
+            identifier, length_of_identifier = self.get_identifier_str()
+            color, length_of_color = self.get_color_str()
+            opacity, length_of_opacity = self.get_opacity_str()
+            gui_name, length_gui_name = self.get_gui_name_str()
+            size, length_of_size = self.get_size_str()
 
             point_data = get_point_data(self.state.layer,
                                         self._viewer_state.lon_att,
@@ -428,3 +410,33 @@ class OpenSpaceLayerArtist(LayerArtist):
         send_simp_message(self._socket, MessageType.DISC)
         self.shutdown_connection()
         print('Disconnected from OpenSpace')
+
+
+    def get_identifier_str(self):
+        identifier = self._uuid
+        return identifier, str(len(identifier))
+
+    def get_color_str(self):
+        color = str(to_rgb(self.state.color))
+        return color, str(len(color))
+
+    def get_opacity_str(self):
+        # Round up to 7 decimals to avoid length_of_value being double digits
+        # since OpenSpace expects the length_of_value to be 1 byte of the subject
+        opacity = str(round(self.state.alpha, 7))
+        return opacity, str(len(opacity))
+
+    def get_gui_name_str(self):
+        gui_name = self._display_name
+
+        # If Length of GUI name can be max 2 bytes (2 numbers)
+        if len(gui_name) > 99:
+            gui_name = gui_name[:(99-3)] + '...'
+            print(f'length_gui_name={len(gui_name)}')
+            # TODO: Inform user of cut GUI name length via popup or something
+
+        return gui_name, str(len(gui_name))
+        
+    def get_size_str(self):
+        size = str(self.state.size)
+        return size, str(len(size))
