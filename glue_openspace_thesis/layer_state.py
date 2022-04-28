@@ -1,9 +1,14 @@
 from __future__ import absolute_import, division, print_function
 
-from glue.external.echo import (CallbackProperty, SelectionCallbackProperty, keep_in_sync)
+from glue.config import colormaps
+from glue.external.echo import (CallbackProperty, SelectionCallbackProperty, keep_in_sync, delay_callback)
 from glue.viewers.common.state import LayerState
 
 from glue.core.data_combo_helper import ComponentIDComboHelper
+from glue.core.state_objects import StateAttributeLimitsHelper
+from glue.viewers.matplotlib.state import (DeferredDrawCallbackProperty as DDCProperty,
+                                           DeferredDrawSelectionCallbackProperty as DDSCProperty)
+# from glue.config import ColormapRegistry as colormaps
 
 __all__ = ['OpenSpaceLayerState']
 
@@ -17,13 +22,13 @@ class OpenSpaceLayerState(LayerState):
 
     size_mode = SelectionCallbackProperty(default_index=0)
 
-    # color_mode = SelectionCallbackProperty(default_index=0)
-    cmap_mode = SelectionCallbackProperty(docstring="Whether to use color to encode an attribute")
-    cmap_att = SelectionCallbackProperty(docstring="The attribute to use for the color")
-    
-    # cmap_vmin = SelectionCallbackProperty(docstring="The lower level for the colormap")
-    # cmap_vmax = SelectionCallbackProperty(docstring="The upper level for the colormap")
-
+    # Color
+    # (notice the diff classes 'DDCProperty' and 'DDSCProperty')
+    cmap_mode = DDSCProperty(docstring="Whether to use color to encode an attribute")
+    cmap_att = DDSCProperty(docstring="The attribute to use for the color")
+    cmap_vmin = DDCProperty(docstring="The lower level for the colormap")
+    cmap_vmax = DDCProperty(docstring="The upper level for the colormap")
+    cmap = DDCProperty(docstring="The colormap to use (when in colormap mode)")
 
     def __init__(self, layer=None, **kwargs):
 
@@ -39,6 +44,7 @@ class OpenSpaceLayerState(LayerState):
         self.size = self.layer.style.markersize
         self.alpha = self.layer.style.alpha
 
+
         OpenSpaceLayerState.cmap_mode.set_choices(self, ['Fixed', 'Linear'])
         OpenSpaceLayerState.size_mode.set_choices(self, ['Fixed'])
 
@@ -47,16 +53,18 @@ class OpenSpaceLayerState(LayerState):
                                                      categorical=False,
                                                      world_coord=True,
                                                      pixel_coord=False)
-        # self.limits_cache = {}
-        # self.cmap_lim_helper = ComponentIDComboHelper(self, attribute='cmap_att',
-        #                                                   lower='cmap_vmin', 
-        #                                                   upper='cmap_vmax',
-        #                                                   limits_cache=self.limits_cache)
+        self.limits_cache = {}
+        self.cmap_lim_helper = StateAttributeLimitsHelper(self, attribute='cmap_att',
+                                                          lower='cmap_vmin', 
+                                                          upper='cmap_vmax',
+                                                          limits_cache=self.limits_cache)
 
         
         self.add_callback('layer', self._on_layer_change)
         if layer is not None:
             self._on_layer_change()
+
+        self.cmap = colormaps.members[0][1] # Set to first colormap
 
         self.update_from_dict(kwargs)
 
@@ -71,10 +79,10 @@ class OpenSpaceLayerState(LayerState):
             self.size = self.layer.style.markersize
             self._sync_markersize = keep_in_sync(self, 'size', self.layer.style, 'markersize')
 
-    # loads the columns into the cmap attributes 
+    # Loads the columns into the cmap attributes 
     def _on_layer_change(self, layer=None):
-        # with delay_callback(self, 'cmap_vmin', 'cmap_vmax'):
-        if self.layer is None:
-            self.cmap_att_helper.set_multiple_data([])
-        else:
-            self.cmap_att_helper.set_multiple_data([self.layer])
+        with delay_callback(self, 'cmap_vmin', 'cmap_vmax'):
+            if self.layer is None:
+                self.cmap_att_helper.set_multiple_data([])
+            else:
+                self.cmap_att_helper.set_multiple_data([self.layer])

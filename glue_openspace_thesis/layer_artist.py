@@ -95,6 +95,19 @@ class OpenSpaceLayerArtist(LayerArtist):
 
     def _on_attribute_change(self, **kwargs):
         
+        # if self.state is not None:
+        #     vmin = state.cmap_vmin
+        #     vmax = state.cmap_vmax
+        #     cmap = state.cmap
+
+        # if self.state:
+        #     print(f'===== self.state =====')
+        #     print(f'{self.state}')
+
+        # if self._state:
+        #     print(f'===== self._state =====')
+        #     print(f'{self._state}')
+
         force = kwargs.get('force', False)
 
         if self._socket is None:
@@ -164,7 +177,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                     self.redraw()
                 return
 
-        self.clear()    # TODO: WHY?
+        self.clear() # TODO: WHY?
 
         # Store state of subset to track changes from reselection of subset
         if isinstance(self.state.layer, Subset):
@@ -275,7 +288,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         end += length_of_identifier
         identifier = subject[start:end]
         start += length_of_identifier
-        if message_type == MessageType.UPCO: #"UPCO":
+        if message_type == MessageType.UPCO:
             end += 2
         else:
             end += 1
@@ -284,7 +297,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             if layer._uuid == identifier:
 
                 # Update Color
-                if message_type == MessageType.UPCO: #"UPCO":"UPCO":
+                if message_type == MessageType.UPCO:
                     length_of_value = int(subject[start:end])
                     start = end
                     end += length_of_value
@@ -321,7 +334,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                     break
 
                 # Update Opacity
-                if message_type == MessageType.UPOP: #"UPOP":
+                if message_type == MessageType.UPOP:
                     length_of_value = int(subject[start:end])
                     start = end
                     end += length_of_value
@@ -333,7 +346,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                     break
 
                 # Update Size
-                if message_type == MessageType.UPSI: #"UPSI":
+                if message_type == MessageType.UPSI:
                     length_of_value = int(subject[start:end])
                     start = end
                     end += length_of_value
@@ -345,7 +358,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                     break
 
                 # Toggle Visibility
-                if message_type == MessageType.TOVI: #"TOVI":
+                if message_type == MessageType.TOVI:
                     TOVI_value = subject[start]
                     self.will_send_message = False
 
