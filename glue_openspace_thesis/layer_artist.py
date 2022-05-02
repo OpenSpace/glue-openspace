@@ -103,10 +103,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         #     vmax = state.cmap_vmax
         #     cmap = state.cmap
 
-        # TODO: MOVE DOWN TO AFTER ' if self._viewer_state.lon_att...'
-        changed = self.pop_changed_properties()
-        print(f'changed={changed}')
-
         force = kwargs.get('force', False)
 
         if self._socket is None:
@@ -115,7 +111,8 @@ class OpenSpaceLayerArtist(LayerArtist):
         if self._viewer_state.lon_att is None or self._viewer_state.lat_att is None:
             return
 
-        # changed = self.pop_changed_properties()
+        changed = self.pop_changed_properties()
+        # print(f'changed={changed}')
 
         if len(changed) == 0 and not force:
             return
