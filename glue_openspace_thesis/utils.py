@@ -103,3 +103,6 @@ def send_simp_message(socket, message_type, subject=''):
    
     # Wait for a short time to avoid sending too many messages in quick succession
     time.sleep(WAIT_TIME)
+
+def get_eight_bit_list():
+    return [i/256 for i in range(0,256)]

@@ -7,14 +7,16 @@ import time
 import shutil
 import tempfile
 import matplotlib
+import numpy
 from matplotlib.colors import ColorConverter
 
 from glue.core import Data, Subset
 from glue.viewers.common.layer_artist import LayerArtist
 from glue.utils.qt import messagebox_on_error
+from glue.utils import ensure_numerical
 
 from .layer_state import OpenSpaceLayerState
-from .utils import get_point_data, WAIT_TIME, send_simp_message
+from .utils import get_point_data, WAIT_TIME, send_simp_message, get_eight_bit_list
 
 
 to_rgb = ColorConverter.to_rgb
@@ -27,6 +29,7 @@ __all__ = ['OpenSpaceLayerArtist']
 TEXTURE_ORIGIN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
 TEXTURE = tempfile.mktemp(suffix='.png')
 shutil.copy(TEXTURE_ORIGIN, TEXTURE)
+CMAP_PROPERTIES = set(['cmap_mode', 'cmap_att', 'cmap_vmin', 'cmap_vmax', 'cmap'])
 
 class MessageType(str, Enum):
     CONN = 'CONN'
@@ -100,13 +103,9 @@ class OpenSpaceLayerArtist(LayerArtist):
         #     vmax = state.cmap_vmax
         #     cmap = state.cmap
 
-        # if self.state:
-        #     print(f'===== self.state =====')
-        #     print(f'{self.state}')
-
-        # if self._state:
-        #     print(f'===== self._state =====')
-        #     print(f'{self._state}')
+        # TODO: MOVE DOWN TO AFTER ' if self._viewer_state.lon_att...'
+        changed = self.pop_changed_properties()
+        print(f'changed={changed}')
 
         force = kwargs.get('force', False)
 
@@ -116,7 +115,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         if self._viewer_state.lon_att is None or self._viewer_state.lat_att is None:
             return
 
-        changed = self.pop_changed_properties()
+        # changed = self.pop_changed_properties()
 
         if len(changed) == 0 and not force:
             return
@@ -137,7 +136,8 @@ class OpenSpaceLayerArtist(LayerArtist):
                 value, length_of_value = self.get_opacity_str()
                 subject = length_of_identifier + identifier + length_of_value + value
 
-            elif "color" in changed:
+            # elif "color" in changed:
+            elif "color" in changed and self.state.cmap_mode is 'Fixed':
                 message_type = MessageType.UPCO
                 value, length_of_value = self.get_color_str()
                 subject = length_of_identifier + identifier + length_of_value + value
@@ -156,6 +156,30 @@ class OpenSpaceLayerArtist(LayerArtist):
                 else:
                     return
                 subject = length_of_identifier + identifier + value
+
+            elif any(prop in changed for prop in CMAP_PROPERTIES):
+                scalars_for_points = ensure_numerical(self.layer[self.state.cmap_att].ravel())
+                # print(f'\tscalars_for_points = {scalars_for_points}')
+
+                # Get cmap as list of 256 RGB colors
+                cmap_for_simp = None
+                if isinstance(self.state.cmap, matplotlib.colors.ListedColormap):
+                    cmap_for_simp = self.state.cmap.colors
+                if isinstance(self.state.cmap, matplotlib.colors.LinearSegmentedColormap):
+                    cmap_for_simp = self.get_linear_segmented_cmap_for_simp()
+                    # print(f'\tcmap_for_simp = {cmap_for_simp}')
+
+                cmap_for_simp_str = str(cmap_for_simp).replace(' ', '')
+                print(f'\tlen(cmap_for_simp_str) = {len(cmap_for_simp_str)}')
+
+                cmap_for_simp_hex = [to_hex(x) for x in cmap_for_simp]
+                cmap_for_simp_hex_str = str(cmap_for_simp_hex).replace(' ', '') \
+                                                            .replace('#', '') \
+                                                            .replace('\'', '') # 75% shorter
+                print(f'\tlen(cmap_for_simp_hex_str) = {len(cmap_for_simp_hex_str)}')
+                
+                # TODO: Setup to send cmap with SIMP message
+                
 
             # TODO: Setup for GUI name change
 
@@ -431,7 +455,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         # If Length of GUI name can be max 2 bytes (2 numbers)
         if len(gui_name) > 99:
-            gui_name = gui_name[:(99-3)] + '...'
+            gui_name = gui_name[:(99-17)] + '...[NAME TOO LONG]'
             print(f'length_gui_name={len(gui_name)}')
             # TODO: Inform user of cut GUI name length via popup or something
 
@@ -440,3 +464,22 @@ class OpenSpaceLayerArtist(LayerArtist):
     def get_size_str(self):
         size = str(self.state.size)
         return size, str(len(size))
+    
+    def get_rgb_from_cmap(self, scalar):
+        """
+        Returns a list of a 6 decimals R, G, B
+        value based on the scalar value in the cmap.
+        [R,G,B]
+        """
+        rgb = self.state.cmap(scalar)
+        return [round(ch, 6) for ch in rgb[:3]] # Remove alpha value
+        # return [round(rgb[0], 8), round(rgb[1], 8), round(rgb[2], 8)]
+
+    def get_linear_segmented_cmap_for_simp(self):
+        return [self.get_rgb_from_cmap(x) for x in get_eight_bit_list()]
+
+
+# [0.99607843, 0.99607843, 0.99607843, 1.0]
+# [0.99607843, 0.99607843, 0.99607843]
+# [0.99607843, 0.99607843, 0.99607843]
+# [0.996078, 0.996078, 0.996078]

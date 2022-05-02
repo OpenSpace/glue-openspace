@@ -44,9 +44,9 @@ class OpenSpaceLayerState(LayerState):
         self.size = self.layer.style.markersize
         self.alpha = self.layer.style.alpha
 
-
-        OpenSpaceLayerState.cmap_mode.set_choices(self, ['Fixed', 'Linear'])
-        OpenSpaceLayerState.size_mode.set_choices(self, ['Fixed'])
+        # ====== NEW ======
+        # self._sync_cmap = keep_in_sync(self, 'cmap', self.layer.style, 'cmap')
+        # self.cmap = self.layer.style.cmap
 
         self.cmap_att_helper = ComponentIDComboHelper(self, 'cmap_att',
                                                      numeric=True,
@@ -58,6 +58,9 @@ class OpenSpaceLayerState(LayerState):
                                                           lower='cmap_vmin', 
                                                           upper='cmap_vmax',
                                                           limits_cache=self.limits_cache)
+
+        OpenSpaceLayerState.cmap_mode.set_choices(self, ['Fixed', 'Linear'])
+        OpenSpaceLayerState.size_mode.set_choices(self, ['Fixed'])
 
         
         self.add_callback('layer', self._on_layer_change)
@@ -86,3 +89,13 @@ class OpenSpaceLayerState(LayerState):
                 self.cmap_att_helper.set_multiple_data([])
             else:
                 self.cmap_att_helper.set_multiple_data([self.layer])
+
+    # def flip_cmap(self):
+    #     """
+    #     Flip the cmap_vmin/cmap_vmax limits.
+    #     """
+    #     self.cmap_lim_helper.flip_limits()
+
+    @property
+    def cmap_name(self):
+        return colormaps.name_from_cmap(self.cmap)
