@@ -1,18 +1,26 @@
+from enum import Enum
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-import time
+from matplotlib.colors import to_hex
 
-
-__all__ = ['get_point_data', 'protocol_version', 'send_simp_message', 'WAIT_TIME']
+__all__ = ['get_point_data', 'protocol_version', 'WAIT_TIME', 'color_string_to_hex', 'get_eight_bit_list']
 # , 'get_luminosity_data', 'get_velocity_data'
 
-
-protocol_version = '1.0'
+protocol_version = '1.5'
 WAIT_TIME = 0.01 # Time to wait after sending websocket message
+
+class SIMPMessageType(str, Enum):
+    Connection = 'CONN'
+    Disconnection = 'DISC'
+    PointData = 'PDAT'
+    RemoveSceneGraphNode = 'RSGN'
+    Color = 'UPCO'
+    Opacity = 'UPOP'
+    Size = 'UPSI'
+    Visibility = 'TOVI'
 
 def get_point_data(data, longitude_attribute, latitude_attribute, alternative_attribute=None,
                    frame=None, alternative_unit=None):
-
     x_coordinates = ""
     y_coordinates = ""
     z_coordinates = ""
@@ -56,7 +64,6 @@ def get_point_data(data, longitude_attribute, latitude_attribute, alternative_at
     point_data_string = number_of_points + x_coordinates + y_coordinates + z_coordinates
     return point_data_string
 
-
 # # DOESN'T WORK! USED FOR TESTING FOR FUTURE WORK
 # def get_luminosity_data(data, luminosity_attribute):
 #     luminosity_data = ""
@@ -70,7 +77,6 @@ def get_point_data(data, longitude_attribute, latitude_attribute, alternative_at
 
 #     luminosity_data_string = length_luminosity_data + luminosity_data
 #     return luminosity_data_string
-
 
 # # DOESN'T WORK! USED FOR TESTING FOR FUTURE WORK
 # def get_velocity_data(data, velocity_attribute):
@@ -86,23 +92,30 @@ def get_point_data(data, longitude_attribute, latitude_attribute, alternative_at
 #     velocity_data_string = length_velocity_data + velocity_data
 #      return velocity_data_string
 
-def send_simp_message(socket, message_type, subject=''):
-    time.sleep(WAIT_TIME)
-    length_of_subject = str(format(len(subject), '09')) # formats to a 9-bit string
-    message = protocol_version + message_type + length_of_subject + subject
-    
-    if len(message) > 115:
-        print(f'Sending SIMP message \"{message[0:90]}...\"')
-    else:
-        print(f'Sending SIMP message \"{message}\"')
-    
-    
-    # print(f'Sending SIMP message \"{message}\"')
-
-    socket.send(bytes(message, 'utf-8'))
-   
-    # Wait for a short time to avoid sending too many messages in quick succession
-    time.sleep(WAIT_TIME)
-
 def get_eight_bit_list():
     return [i/256 for i in range(0,256)]
+
+# `color_string` is received in this format: (redValue, greenValue, blueValue)
+def color_string_to_hex(color_string):
+    x = 0
+    red = ""
+    while color_string[x] != ",":  # first value in string is before first ","
+        red += color_string[x]
+        x += 1
+    r = float(red)
+
+    x += 1
+    green = ""
+    while color_string[x] != ",":  # second value in string is before second ","
+        green += color_string[x]
+        x += 1
+    g = float(green)
+
+    x += 1
+    blue = ""
+    for y in range(x, len(color_string)):  # third value in string
+        blue += color_string[y]
+        y += 1
+    b = float(blue)
+
+    return to_hex([r, g, b])

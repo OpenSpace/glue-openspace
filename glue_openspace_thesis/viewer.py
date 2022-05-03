@@ -11,7 +11,6 @@ from .viewer_state import OpenSpaceViewerState
 from .layer_artist import OpenSpaceLayerArtist
 from .viewer_state_widget import OpenSpaceViewerStateWidget
 from .layer_state_widget import OpenSpaceLayerStateWidget
-from .utils import send_simp_message
 
 __all__ = ['OpenSpaceDataViewer']
 
