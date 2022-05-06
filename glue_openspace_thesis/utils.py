@@ -1,13 +1,21 @@
 from enum import Enum
+import string
+import struct
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from matplotlib.colors import to_hex
 
-__all__ = ['get_point_data', 'protocol_version', 'WAIT_TIME', 'color_string_to_hex', 'get_eight_bit_list']
+__all__ = [
+    'get_point_data', 'protocol_version', 'WAIT_TIME',
+    'color_string_to_hex', 'get_eight_bit_list',
+    'float_to_hex', 'hex_to_float', 'int_to_hex', 'hex_to_int',
+    "SEP"
+]
 # , 'get_luminosity_data', 'get_velocity_data'
 
-protocol_version = '1.5'
+protocol_version = '1.6'
 WAIT_TIME = 0.01 # Time to wait after sending websocket message
+SEP = ";"
 
 class SIMPMessageType(str, Enum):
     Connection = 'CONN'
@@ -21,10 +29,7 @@ class SIMPMessageType(str, Enum):
 
 def get_point_data(data, longitude_attribute, latitude_attribute, alternative_attribute=None,
                    frame=None, alternative_unit=None):
-    x_coordinates = ""
-    y_coordinates = ""
-    z_coordinates = ""
-
+    print(f'started get_point_data')
     longitude = data[longitude_attribute]
     latitude = data[latitude_attribute]
 
@@ -52,17 +57,17 @@ def get_point_data(data, longitude_attribute, latitude_attribute, alternative_at
         y = y.to_value(u.pc)
         z = z.to_value(u.pc)
 
+    coordinates_string = ''
     n_points = len(x)
+    print(f'n_points={n_points}')
 
     for i in range(n_points):
-        x_coordinates += (str(x[i]) + ",")
-        y_coordinates += (str(y[i]) + ",")
-        z_coordinates += (str(z[i]) + ",")
+        coordinates_string += "["\
+            + float_to_hex(float(x[i])) + SEP\
+            + float_to_hex(float(y[i])) + SEP\
+            + float_to_hex(float(z[i])) + SEP + "]"
 
-    number_of_points = str(format(n_points, "09"))
-
-    point_data_string = number_of_points + x_coordinates + y_coordinates + z_coordinates
-    return point_data_string
+    return coordinates_string
 
 # # DOESN'T WORK! USED FOR TESTING FOR FUTURE WORK
 # def get_luminosity_data(data, luminosity_attribute):
@@ -98,24 +103,50 @@ def get_eight_bit_list():
 # `color_string` is received in this format: (redValue, greenValue, blueValue)
 def color_string_to_hex(color_string):
     x = 0
+    if color_string[x] != '[':
+        raise Exception(f'Expected "[", got {color_string[x]}')
+    x += 1
+
     red = ""
-    while color_string[x] != ",":  # first value in string is before first ","
+    while color_string[x] != ";":  # first value in string
         red += color_string[x]
         x += 1
-    r = float(red)
+    r = hex_to_float(red)
 
     x += 1
     green = ""
-    while color_string[x] != ",":  # second value in string is before second ","
+    while color_string[x] != ";":  # second value in string
         green += color_string[x]
         x += 1
-    g = float(green)
+    g = hex_to_float(green)
 
     x += 1
     blue = ""
-    for y in range(x, len(color_string)):  # third value in string
-        blue += color_string[y]
-        y += 1
-    b = float(blue)
+    while color_string[x] != ";":  # third value in string
+        blue += color_string[x]
+        x += 1
+    b = hex_to_float(blue)
 
-    return to_hex([r, g, b])
+    x += 1
+    alpha = ""
+    while color_string[x] != ";":  # fourth value in string
+        alpha += color_string[x]
+        x += 1
+    a = hex_to_float(alpha)
+
+    if color_string[x] != ']':
+        raise Exception(f'Expected "]", got {color_string[x]}')
+
+    return to_hex([r, g, b]), a
+
+def float_to_hex(f) -> string:
+    return (f).hex()
+
+def hex_to_float(f) -> float:
+    return struct.unpack('!f', bytes.fromhex(f))[0]
+
+def int_to_hex(i) -> string:
+    return hex(i)
+
+def hex_to_int(i) -> int:
+    return int(i, base=16)

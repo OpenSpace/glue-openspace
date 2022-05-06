@@ -13,7 +13,10 @@ from glue.utils.qt import messagebox_on_error
 from glue.utils import ensure_numerical
 
 from .layer_state import OpenSpaceLayerState
-from .utils import get_point_data, protocol_version, WAIT_TIME, SIMPMessageType, color_string_to_hex, get_eight_bit_list
+from .utils import \
+    get_point_data, protocol_version, WAIT_TIME, SIMPMessageType,\
+    color_string_to_hex, get_eight_bit_list, float_to_hex, hex_to_float,\
+    int_to_hex, hex_to_int, SEP
 
 __all__ = ['OpenSpaceLayerArtist']
 
@@ -205,12 +208,14 @@ class OpenSpaceLayerArtist(LayerArtist):
             print(f'len(point_data)={len(point_data)}')
 
             subject = (
-                length_of_identifier + identifier +
-                length_of_color + color +
-                length_of_opacity + opacity +
-                length_of_size + size +
-                length_gui_name + gui_name +
-                point_data
+                identifier + SEP +
+                color + SEP +
+                opacity + SEP +
+                size + SEP +
+                gui_name + SEP +
+                int_to_hex(len(point_data)) + SEP +
+                int_to_hex(3) + SEP +
+                point_data + SEP
             )
             print(f'length_gui_name={length_gui_name}')
             self.send_simp_message(SIMPMessageType.PointData, subject)
@@ -351,7 +356,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 start = end
                 end += length_of_value
 
-                color_value = color_string_to_hex(subject[start + 1:end - 1])
+                color_value, alpha = color_string_to_hex(subject[start + 1:end - 1])
 
                 self.will_send_message = False
                 layer.state.color = color_value
@@ -464,28 +469,35 @@ class OpenSpaceLayerArtist(LayerArtist):
         return identifier, str(len(identifier))
 
     def get_color_str(self):
-        color = str(to_rgb(self.state.color))
-        return color, str(len(color))
+        color = to_rgb(self.state.color if (self.state.color != None) else (0,1,0))
+        r = float_to_hex(color[0])
+        g = float_to_hex(color[1])
+        b = float_to_hex(color[2])
+        a = float_to_hex(1.0)
+        return '[' + r + SEP + g + SEP + b + SEP + a + SEP + ']', str(len(color))
 
     def get_opacity_str(self):
         # Round up to 7 decimals to avoid length_of_value being double digits
         # since OpenSpace expects the length_of_value to be 1 byte of the subject
-        opacity = str(round(self.state.alpha, 7))
+        # opacity = str(round(self.state.alpha, 7))
+        opacity = float_to_hex(self.state.alpha)
         return opacity, str(len(opacity))
 
     def get_gui_name_str(self):
         gui_name = self._display_name
+        clean_gui_name = ''
 
-        # If Length of GUI name can be max 2 bytes (2 numbers)
-        if len(gui_name) > 99:
-            gui_name = gui_name[:(99-17)] + '...[NAME TOO LONG]'
-            print(f'length_gui_name={len(gui_name)}')
-            # TODO: Inform user of cut GUI name length via popup or something
+        # Escape all potential occurences of the separator character inside the gui name
+        for i in range(len(gui_name)):
+            if (gui_name[i] == SEP):
+                clean_gui_name += '\\'
+            clean_gui_name += gui_name[i]
 
-        return gui_name, str(len(gui_name))
+        return clean_gui_name, str(len(clean_gui_name))
         
     def get_size_str(self):
-        size = str(self.state.size)
+        # size = str(self.state.size)
+        size = float_to_hex(self.state.size)
         return size, str(len(size))
     
     def get_rgb_from_cmap(self, scalar):
