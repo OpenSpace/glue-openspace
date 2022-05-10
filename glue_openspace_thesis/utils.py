@@ -23,6 +23,7 @@ class SIMPMessageType(str, Enum):
     PointData = 'PDAT'
     RemoveSceneGraphNode = 'RSGN'
     Color = 'UPCO'
+    ColorMap = 'LCOL'
     Opacity = 'UPOP'
     Size = 'UPSI'
     Visibility = 'TOVI'

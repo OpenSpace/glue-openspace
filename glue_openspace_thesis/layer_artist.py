@@ -13,10 +13,9 @@ from glue.utils.qt import messagebox_on_error
 from glue.utils import ensure_numerical
 
 from .layer_state import OpenSpaceLayerState
-from .utils import \
-    get_point_data, protocol_version, WAIT_TIME, SIMPMessageType,\
-    color_string_to_hex, get_eight_bit_list, float_to_hex, hex_to_float,\
-    int_to_hex, hex_to_int, SEP
+from .utils import (get_point_data, protocol_version, WAIT_TIME, SIMPMessageType,
+                    color_string_to_hex, get_eight_bit_list, float_to_hex, 
+                    hex_to_float, int_to_hex, hex_to_int, SEP)
 
 __all__ = ['OpenSpaceLayerArtist']
 
@@ -72,7 +71,7 @@ class OpenSpaceLayerArtist(LayerArtist):
     def stop_socket_thread(self):
         self._thread_running = False
         self._threadCommsRx = None
-    
+
     def _on_attribute_change(self, **kwargs):
         if self._socket is None:
             return
@@ -90,8 +89,6 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         if len(changed) == 0 and not force:
             return
-
-        # print(f'changed {changed}')
 
         # If properties update in Glue, send message to OpenSpace with new values
         if self._uuid is not None:
@@ -129,33 +126,14 @@ class OpenSpaceLayerArtist(LayerArtist):
                     return
                 subject = length_of_identifier + identifier + value
 
-            elif any(prop in changed for prop in CMAP_PROPERTIES):
-                scalars_for_points = ensure_numerical(self.layer[self.state.cmap_att].ravel())
-                # print(f'\tscalars_for_points = {scalars_for_points}')
-
-                # Get cmap as list of 256 RGB colors
-                cmap_for_simp = None
-                if isinstance(self.state.cmap, ListedColormap):
-                    cmap_for_simp = self.state.cmap.colors
-                if isinstance(self.state.cmap, LinearSegmentedColormap):
-                    cmap_for_simp = self.get_linear_segmented_cmap_for_simp()
-                    # print(f'\tcmap_for_simp = {cmap_for_simp}')
-
-                cmap_for_simp_str = str(cmap_for_simp).replace(' ', '')
-                print(f'\tlen(cmap_for_simp_str) = {len(cmap_for_simp_str)}')
-
-                cmap_for_simp_hex = [to_hex(x) for x in cmap_for_simp]
-                cmap_for_simp_hex_str = str(cmap_for_simp_hex).replace(' ', '') \
-                                                            .replace('#', '') \
-                                                            .replace('\'', '') # 75% shorter
-                print(f'\tlen(cmap_for_simp_hex_str) = {len(cmap_for_simp_hex_str)}')
-                
-                # TODO: Setup to send cmap with SIMP message
-                
+            if any(prop in changed for prop in CMAP_PROPERTIES) \
+                and self.state.cmap_mode is 'Linear':
+                message_type = SIMPMessageType.ColorMap
+                subject = self.get_cmap_subject(identifier)
 
             # TODO: Setup for GUI name change
 
-            print(f"message_type={message_type}, subject={subject}")
+            # print(f"message_type={message_type}, subject={subject}")
             # Send the correct message to OpenSpace
             if subject:
                 self.send_simp_message(message_type, subject)
@@ -219,6 +197,11 @@ class OpenSpaceLayerArtist(LayerArtist):
             )
             print(f'length_gui_name={length_gui_name}')
             self.send_simp_message(SIMPMessageType.PointData, subject)
+
+            # If in linear cmap mode, send cmap message as well
+            if self.state.cmap_mode is 'Linear':
+                time.sleep(WAIT_TIME * 100) # TODO: Is there another way to make sure the renderable exists before we send a message to change it?
+                self.send_simp_message(SIMPMessageType.ColorMap, self.get_cmap_subject(identifier))
             
         except Exception as exc:
             print(str(exc))
@@ -329,6 +312,8 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         message_type, subject = self.parse_message(message_received)
+
+        print(f'\tReceived new message: \'{message_type}\'')
 
         if message_type == SIMPMessageType.Disconnection:
             raise DisconnectionException
@@ -468,12 +453,24 @@ class OpenSpaceLayerArtist(LayerArtist):
         identifier = self._uuid
         return identifier, str(len(identifier))
 
-    def get_color_str(self):
-        color = to_rgb(self.state.color if (self.state.color != None) else (0,1,0))
+    def get_color_str(self, color=None):
+        """
+        `color` should be [r, g, b] or [r, g, b, a].
+        If `color` isn't specified, self.state.color 
+        or green will be used.
+        """
+        if color == None:
+            color = to_rgb(self.state.color if (self.state.color != None) 
+                                            else [0.0,1.0,0.0,1.0])
+        else:
+            if not isinstance(color, list):
+                print('The provided color is not of type list...')
+                return
+
         r = float_to_hex(color[0])
         g = float_to_hex(color[1])
         b = float_to_hex(color[2])
-        a = float_to_hex(1.0)
+        a = float_to_hex(color[3] if (len(color) == 4) else 1.0)
         return '[' + r + SEP + g + SEP + b + SEP + a + SEP + ']', str(len(color))
 
     def get_opacity_str(self):
@@ -507,8 +504,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         [R,G,B]
         """
         rgb = self.state.cmap(scalar)
-        return [round(ch, 6) for ch in rgb[:3]] # Remove alpha value
-        # return [round(rgb[0], 8), round(rgb[1], 8), round(rgb[2], 8)]
+        return [round(ch, 6) for ch in rgb]
 
     def get_linear_segmented_cmap_for_simp(self):
         return [self.get_rgb_from_cmap(x) for x in get_eight_bit_list()]
@@ -536,3 +532,28 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         # Wait for a short time to avoid sending too many messages in quick succession
         time.sleep(WAIT_TIME)
+
+    def get_cmap_str_for_simp(self):
+        cmap_for_simp = None
+        if hasattr(self.state.cmap, 'colors'):
+            cmap_for_simp = self.state.cmap.colors
+            cmap_for_simp = [[c[0], c[1], c[2], 1.0] for c in cmap_for_simp]
+        else:
+            cmap_for_simp = self.get_linear_segmented_cmap_for_simp()
+
+        nr_of_colors = str(len(cmap_for_simp))
+
+        cmap_simp_hex_str = ''
+        for color in cmap_for_simp:
+            color_hex_str, len_color_hex_str = self.get_color_str(color)
+            cmap_simp_hex_str += color_hex_str
+
+        return cmap_simp_hex_str, nr_of_colors
+
+    def get_cmap_subject(self, identifier):
+        # scalars_for_points = ensure_numerical(self.layer[self.state.cmap_att].ravel())
+        # print(f'\tscalars_for_points = {scalars_for_points}')
+
+        cmap_simp_hex_str, nr_of_colors = self.get_cmap_str_for_simp()
+        subject = identifier + SEP + cmap_simp_hex_str + SEP# + vmin + SEP + vmax + SEP + scalars_for_points + SEP
+        return subject
