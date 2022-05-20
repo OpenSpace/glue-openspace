@@ -1,147 +1,311 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>WWT</class>
- <widget class="QWidget" name="WWT">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>363</width>
-    <height>289</height>
-   </rect>
-  </property>
-  <property name="windowTitle">
-   <string>Form</string>
-  </property>
-  <layout class="QGridLayout" name="gridLayout">
-   <property name="leftMargin">
-    <number>4</number>
-   </property>
-   <property name="topMargin">
-    <number>4</number>
-   </property>
-   <property name="rightMargin">
-    <number>4</number>
-   </property>
-   <property name="bottomMargin">
-    <number>4</number>
-   </property>
-   <property name="verticalSpacing">
-    <number>5</number>
-   </property>
-   <item row="6" column="1">
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1">
-    <widget class="QComboBox" name="combosel_lon_att">
-     <property name="sizeAdjustPolicy">
-      <enum>QComboBox::AdjustToMinimumContentsLength</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="label_lon_att">
-     <property name="text">
-      <string>Longitude:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="label_lat_att">
-     <property name="text">
-      <string>Latitude:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0">
-    <widget class="QComboBox" name="combosel_alt_type">
-     <property name="sizeAdjustPolicy">
-      <enum>QComboBox::AdjustToContents</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QComboBox" name="combosel_frame">
-     <property name="sizeAdjustPolicy">
-      <enum>QComboBox::AdjustToMinimumContentsLength</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="1">
-    <widget class="QComboBox" name="combosel_lat_att">
-     <property name="sizeAdjustPolicy">
-      <enum>QComboBox::AdjustToMinimumContentsLength</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="label_frame">
-     <property name="text">
-      <string>Frame:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="11" column="1">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="0" column="1">
-    <widget class="QComboBox" name="combosel_mode">
-     <property name="sizeAdjustPolicy">
-      <enum>QComboBox::AdjustToMinimumContentsLength</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="1">
-    <widget class="QComboBox" name="combosel_alt_unit">
-     <property name="sizeAdjustPolicy">
-      <enum>QComboBox::AdjustToMinimumContentsLength</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="label_mode">
-     <property name="font">
-      <font>
-       <weight>50</weight>
-       <bold>false</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Mode:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="1">
-    <widget class="QComboBox" name="combosel_alt_att"/>
-   </item>
-  </layout>
- </widget>
- <resources/>
- <connections/>
+  <class>WWT</class>
+  <widget class="QWidget" name="WWT">
+    <layout class="QGridLayout" name="grid">
+      <property name="leftMargin">
+        <number>5</number>
+      </property>
+      <property name="topMargin">
+        <number>5</number>
+      </property>
+      <property name="rightMargin">
+        <number>5</number>
+      </property>
+      <property name="bottomMargin">
+        <number>5</number>
+      </property>
+      <item row="0" column="0">
+        <widget class="QTabWidget" name="tabWidget">
+          <property name="currentIndex">
+            <number>0</number>
+          </property>
+          <widget class="QWidget" name="data_points_tab">
+            <attribute name="title">
+              <string>General</string>
+            </attribute>
+            <layout class="QGridLayout" name="data_points_grid">
+              <property name="leftMargin">
+                <number>4</number>
+              </property>
+              <property name="topMargin">
+                <number>8</number>
+              </property>
+              <property name="rightMargin">
+                <number>4</number>
+              </property>
+              <property name="bottomMargin">
+                <number>4</number>
+              </property>
+              <property name="verticalSpacing">
+                <number>5</number>
+              </property>
+              <!--================================================================-->
+              <item row="0" column="0" alignment="Qt::AlignRight">
+                <widget class="QLabel" name="label_coordinate_system">
+                  <property name="text">
+                    <string>Coordinate system:</string>
+                  </property>
+                </widget>
+              </item>
+              <item row="0" column="1">
+                <widget class="QComboBox" name="combosel_coordinate_system">
+                  <property name="sizeAdjustPolicy">
+                    <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                  </property>
+                </widget>
+              </item>
+              <!--================================================================-->
+              <item row="1" column="0" colspan="2" name="coordinates">
+                <widget class="QStackedWidget" name="coordinates_stacked_widget">
+                  <property name="currentIndex">
+                    <number>0</number>
+                  </property>
+                  <!--================================================================-->
+                  <widget class="QWidget" name="cartesian">
+                    <layout class="QGridLayout" name="cartesianGrid">
+                      <property name="leftMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="verticalSpacing">
+                        <number>5</number>
+                      </property>
+                      <!--================================================================-->
+                      <item row="0" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_x_att">
+                          <property name="text">
+                            <string>x:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="0" column="1">
+                        <widget class="QComboBox" name="combosel_x_att">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                      <!--================================================================-->
+                      <item row="1" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_y_att">
+                          <property name="text">
+                            <string>y:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="1" column="1">
+                        <widget class="QComboBox" name="combosel_y_att">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                      <!--================================================================-->
+                      <item row="2" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_z_att">
+                          <property name="text">
+                            <string>z:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="2" column="1">
+                        <widget class="QComboBox" name="combosel_z_att">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                      <!--================================================================-->
+                      <item row="3" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_cartesian_unit_att">
+                          <property name="text">
+                            <string>Unit:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="3" column="1">
+                        <widget class="QComboBox" name="combosel_cartesian_unit_att">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                    </layout>
+                  </widget>
+                  <!--================================================================-->
+                  <!--================================================================-->
+                  <widget class="QWidget" name="non_cartesian">
+                    <layout class="QGridLayout" name="non_cartesian_grid">
+                      <property name="leftMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="verticalSpacing">
+                        <number>5</number>
+                      </property>
+                      <!--================================================================-->
+                      <item row="0" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_lon_att">
+                          <property name="text">
+                            <string>Longitude:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="0" column="1">
+                        <widget class="QComboBox" name="combosel_lon_att">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                      <!--================================================================-->
+                      <item row="1" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_lat_att">
+                          <property name="text">
+                            <string>Latitude:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="1" column="1">
+                        <widget class="QComboBox" name="combosel_lat_att">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                      <!--================================================================-->
+                      <!-- <item row="2" column="0" alignment="Qt::AlignRight">
+                        <widget class="QComboBox" name="combosel_alt_type">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToContents</enum>
+                          </property>
+                        </widget>
+                      </item> -->
+                      <item row="2" column="0" alignment="Qt::AlignRight|Qt::AlignVCenter">
+                        <widget class="QLabel" name="label_alt_att">
+                          <property name="text">
+                            <string>Distance:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="2" column="1">
+                        <layout class="QGridLayout" name="distance_grid">
+                          <item row="0" column="0" colspan="2">
+                            <widget class="QComboBox" name="combosel_alt_att"/>
+                          </item>
+                          <item row="1" column="0">
+                            <spacer name="horizontalSpacer">
+                              <property name="orientation">
+                                <enum>Qt::Horizontal</enum>
+                              </property>
+                              <property name="sizeHint" stdset="0">
+                                <size>
+                                  <width>40</width>
+                                  <height>20</height>
+                                </size>
+                              </property>
+                            </spacer>
+                          </item>
+                          <item row="1" column="1">
+                            <widget class="QComboBox" name="combosel_alt_unit">
+                              <property name="sizeAdjustPolicy">
+                                <enum>QComboBox::AdjustToContents</enum>
+                              </property>
+                            </widget>
+                          </item>
+                        </layout>
+                      </item>
+                    </layout>
+                  </widget>
+                  <!--================================================================-->
+                </widget>
+              </item>
+              <!--================================================================-->
+              <!--================================================================-->
+              <!-- <item row="2" column="0" alignment="Qt::AlignRight">
+                <widget class="QLabel" name="label_alt_unit">
+                  <property name="text">
+                    <string>Unit:</string>
+                  </property>
+                </widget>
+              </item>
+              <item row="2" column="1">
+                <widget class="QComboBox" name="combosel_alt_unit">
+                  <property name="sizeAdjustPolicy">
+                    <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                  </property>
+                </widget>
+              </item> -->
+              <!--================================================================-->
+              <!--================================================================-->
+              <item row="2" column="0">
+                <spacer name="verticalSpacer">
+                  <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeType">
+                    <enum>QSizePolicy::Expanding</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                    <size>
+                      <width>20</width>
+                      <height>40</height>
+                    </size>
+                  </property>
+                </spacer>
+              </item>
+              <!--================================================================-->
+            </layout>
+          </widget>
+          <widget class="QWidget" name="velocity_tab">
+            <attribute name="title">
+              <string>Velocity</string>
+            </attribute>
+            <layout class="QGridLayout" name="data_points_grid">
+              <property name="leftMargin">
+                <number>4</number>
+              </property>
+              <property name="topMargin">
+                <number>8</number>
+              </property>
+              <property name="rightMargin">
+                <number>4</number>
+              </property>
+              <property name="bottomMargin">
+                <number>4</number>
+              </property>
+              <property name="verticalSpacing">
+                <number>5</number>
+              </property>
+            </layout>
+          </widget>
+        </widget>
+      </item>
+    </layout>
+  </widget>
+  <resources/>
+  <connections/>
 </ui>

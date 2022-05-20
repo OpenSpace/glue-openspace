@@ -1,406 +1,420 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>330</width>
-    <height>296</height>
-   </rect>
-  </property>
-  <property name="windowTitle">
-   <string>Form</string>
-  </property>
-  <layout class="QGridLayout" name="gridLayout">
-   <property name="leftMargin">
-    <number>5</number>
-   </property>
-   <property name="topMargin">
-    <number>5</number>
-   </property>
-   <property name="rightMargin">
-    <number>5</number>
-   </property>
-   <property name="bottomMargin">
-    <number>5</number>
-   </property>
-   <item row="0" column="1">
-    <widget class="QTabWidget" name="tab_widget">
-     <property name="currentIndex">
-      <number>0</number>
-     </property>
-     <property name="elideMode">
-      <enum>Qt::ElideNone</enum>
-     </property>
-     
-     <!-- Size -->
-     <!-- TODO: Remove linear option -->
-     <widget class="QWidget" name="tab_2">
-      <attribute name="title">
-       <string>Size</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <property name="spacing">
-        <number>2</number>
-       </property>
-       <property name="leftMargin">
-        <number>12</number>
-       </property>
-       <property name="topMargin">
-        <number>3</number>
-       </property>
-       <property name="rightMargin">
-        <number>12</number>
-       </property>
-       <property name="bottomMargin">
-        <number>3</number>
-       </property>
-       <item>
-        <widget class="QWidget" name="size_row_1" native="true">
-         <layout class="QHBoxLayout" name="horizontalLayout">
-          <property name="spacing">
-           <number>7</number>
-          </property>
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <item>
-           <widget class="QComboBox" name="combosel_size_mode">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>80</width>
-              <height>16777215</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QComboBox" name="combosel_size_att">
-            <property name="sizeAdjustPolicy">
-             <enum>QComboBox::AdjustToMinimumContentsLength</enum>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="valuetext_size"/>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QWidget" name="size_row_2" native="true">
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <property name="spacing">
-           <number>7</number>
-          </property>
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <item>
-           <widget class="QLineEdit" name="valuetext_size_vmin"/>
-          </item>
-          <item>
-           <widget class="QToolButton" name="button_flip_size">
-            <property name="font">
-             <font>
-              <pointsize>14</pointsize>
-             </font>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">padding: 0px</string>
-            </property>
-            <property name="text">
-             <string>⇄</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="valuetext_size_vmax"/>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QWidget" name="size_row_3" native="true">
-         <layout class="QHBoxLayout" name="horizontalLayout_3">
-          <property name="spacing">
-           <number>7</number>
-          </property>
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <item>
-           <widget class="QSlider" name="value_size_scaling">
-            <property name="maximum">
-             <number>11</number>
-            </property>
-            <property name="value">
-             <number>50</number>
-            </property>
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
-
-    <!-- Color -->
-     <widget class="QWidget" name="tab_4">
-      <attribute name="title">
-       <string>Color</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_5">
-       <property name="leftMargin">
-        <number>10</number>
-       </property>
-       <property name="topMargin">
-        <number>3</number>
-       </property>
-       <property name="rightMargin">
-        <number>10</number>
-       </property>
-       <property name="bottomMargin">
-        <number>3</number>
-       </property>
-       <property name="horizontalSpacing">
-        <number>10</number>
-       </property>
-       <property name="verticalSpacing">
+  <class>Form</class>
+  <widget class="QWidget" name="Form">
+    <layout class="QGridLayout" name="gridLayout">
+      <property name="leftMargin">
         <number>5</number>
-       </property>
-       <item row="5" column="1" colspan="3">
-        <widget class="QSlider" name="value_alpha">
-         <property name="maximum">
-          <number>100</number>
-         </property>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QLabel" name="label_7">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>opacity</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QLineEdit" name="valuetext_cmap_vmin"/>
-       </item>
-       <item row="6" column="1" colspan="3">
-        <spacer name="horizontalSpacer_5">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>1</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="0" column="3">
-        <widget class="QColorBox" name="color_color">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="3">
-        <widget class="QLineEdit" name="valuetext_cmap_vmax"/>
-       </item>
-       <item row="6" column="0">
-        <spacer name="verticalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-
-       <item row="2" column="1" colspan="3">
-        <widget class="QComboBox" name="combosel_cmap_att">
-         <property name="sizeAdjustPolicy">
-          <enum>QComboBox::AdjustToMinimumContentsLength</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QComboBox" name="combosel_cmap_mode">
-         <property name="maximumSize">
-          <size>
-           <width>80</width>
-           <height>16777215</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="2">
-        <widget class="QToolButton" name="button_flip_cmap">
-         <property name="styleSheet">
-          <string notr="true">padding: 0px</string>
-         </property>
-         <property name="text">
-          <string>⇄</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_10">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>color mode</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="label_cmap_limits">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>limits</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QLabel" name="label_colormap">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>colormap</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
-
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_cmap_attribute">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>attribute</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1" colspan="3">
-        <widget class="QColormapCombo" name="combodata_cmap">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="sizeAdjustPolicy">
-          <enum>QComboBox::AdjustToMinimumContentsLength</enum>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-
-     <!-- <widget class="QWidget" name="tab_2">
+      </property>
+      <property name="topMargin">
+        <number>5</number>
+      </property>
+      <property name="rightMargin">
+        <number>5</number>
+      </property>
+      <property name="bottomMargin">
+        <number>5</number>
+      </property>
+      <item row="0" column="1">
+        <widget class="QTabWidget" name="tab_widget">
+          <property name="currentIndex">
+            <number>0</number>
+          </property>
+          <property name="elideMode">
+            <enum>Qt::ElideNone</enum>
+          </property>
+          <!--============================= Size =============================-->
+          <widget class="QWidget" name="size_tab">
+            <attribute name="title">
+              <string>Size</string>
+            </attribute>
+            <layout class="QGridLayout" name="verticalLayout">
+              <property name="leftMargin">
+                <number>4</number>
+              </property>
+              <property name="topMargin">
+                <number>8</number>
+              </property>
+              <property name="rightMargin">
+                <number>4</number>
+              </property>
+              <property name="bottomMargin">
+                <number>4</number>
+              </property>
+              <property name="horizontalSpacing">
+                <number>10</number>
+              </property>
+              <property name="verticalSpacing">
+                <number>5</number>
+              </property>
+              <!--================================================================-->
+              <item row="0" column="0">
+                <widget class="QLabel" name="label_size_mode" alignment="Qt::AlignRight|Qt::AlignVCenter">
+                  <property name="font">
+                    <font>
+                      <weight>50</weight>
+                    </font>
+                  </property>
+                  <property name="text">
+                    <string>Size mode:</string>
+                  </property>
+                </widget>
+              </item>
+              <item row="0" column="1">
+                <widget class="QComboBox" name="combosel_size_mode">
+                  <property name="sizePolicy">
+                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                    </sizepolicy>
+                  </property>
+                  <property name="maximumSize">
+                    <size>
+                      <width>80</width>
+                      <height>16777215</height>
+                    </size>
+                  </property>
+                </widget>
+              </item>
+              <item row="0" column="2">
+                <widget class="QWidget" name="size_size">
+                  <widget class="QLineEdit" name="valuetext_size"/>
+                </widget>
+              </item>
+              <!--================================================================-->
+              <item row="1" column="0" colspan="3">
+                <widget class="QWidget" name="size_map_attributes">
+                  <layout class="QGridLayout" name="size_map_grid">
+                    <property name="leftMargin">
+                      <number>0</number>
+                    </property>
+                    <property name="topMargin">
+                      <number>0</number>
+                    </property>
+                    <property name="rightMargin">
+                      <number>0</number>
+                    </property>
+                    <property name="bottomMargin">
+                      <number>0</number>
+                    </property>
+                    <property name="horizontalSpacing">
+                      <number>10</number>
+                    </property>
+                    <property name="verticalSpacing">
+                      <number>5</number>
+                    </property>
+                    <!--================================================================-->
+                    <item row="0" column="0">
+                      <widget class="QLabel" name="label_size_att" alignment="Qt::AlignRight|Qt::AlignVCenter">
+                        <property name="font">
+                          <font>
+                            <weight>50</weight>
+                          </font>
+                        </property>
+                        <property name="text">
+                          <string>Attribute:</string>
+                        </property>
+                      </widget>
+                    </item>
+                    <item row="0" column="1" colspan="3">
+                      <widget class="QComboBox" name="combosel_size_att">
+                        <property name="sizeAdjustPolicy">
+                          <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                        </property>
+                      </widget>
+                    </item>
+                    <!--================================================================-->
+                    <item row="1" column="0">
+                      <widget class="QLabel" name="label_limits_att" alignment="Qt::AlignRight|Qt::AlignVCenter">
+                        <property name="font">
+                          <font>
+                            <weight>50</weight>
+                          </font>
+                        </property>
+                        <property name="text">
+                          <string>Limits:</string>
+                        </property>
+                      </widget>
+                    </item>
+                    <item row="1" column="1">
+                      <widget class="QLineEdit" name="valuetext_size_vmin"/>
+                    </item>
+                    <item row="1" column="2">
+                      <widget class="QToolButton" name="button_flip_size">
+                        <property name="font">
+                          <font>
+                            <pointsize>12</pointsize>
+                          </font>
+                        </property>
+                        <property name="styleSheet">
+                          <string notr="true">padding: 0px</string>
+                        </property>
+                        <property name="text">
+                          <string>⇄</string>
+                        </property>
+                      </widget>
+                    </item>
+                    <item row="1" column="3">
+                      <widget class="QLineEdit" name="valuetext_size_vmax"/>
+                    </item>
+                    <!--================================================================-->
+                    <item row="2" column="0">
+                      <widget class="QLabel" name="label_size_scaling" alignment="Qt::AlignRight|Qt::AlignVCenter">
+                        <property name="font">
+                          <font>
+                            <weight>50</weight>
+                          </font>
+                        </property>
+                        <property name="text">
+                          <string>Scaling factor:</string>
+                        </property>
+                      </widget>
+                    </item>
+                    <item row="2" column="1" colspan="3">
+                      <widget class="QSlider" name="value_size_scaling">
+                        <property name="maximum">
+                          <number>11</number>
+                        </property>
+                        <property name="value">
+                          <number>50</number>
+                        </property>
+                        <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                        </property>
+                      </widget>
+                    </item>
+                  </layout>
+                </widget>
+              </item>
+              <!--================================================================-->
+              <item row="2" column="0">
+                <spacer name="verticalSpacer">
+                  <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                    <size>
+                      <width>20</width>
+                      <height>40</height>
+                    </size>
+                  </property>
+                </spacer>
+              </item>
+            </layout>
+          </widget>
+          <!--================================================================-->
+          <!--============================ Color =============================-->
+          <widget class="QWidget" name="color_tab">
+            <attribute name="title">
+              <string>Color</string>
+            </attribute>
+            <layout class="QGridLayout" name="color_grid">
+              <property name="leftMargin">
+                <number>4</number>
+              </property>
+              <property name="topMargin">
+                <number>8</number>
+              </property>
+              <property name="rightMargin">
+                <number>4</number>
+              </property>
+              <property name="bottomMargin">
+                <number>4</number>
+              </property>
+              <property name="horizontalSpacing">
+                <number>10</number>
+              </property>
+              <property name="verticalSpacing">
+                <number>5</number>
+              </property>
+              <!--================================================================-->
+              <item row="0" column="0">
+                <widget class="QLabel" name="label_color_mode" alignment="Qt::AlignRight|Qt::AlignVCenter">
+                  <property name="font">
+                    <font>
+                      <weight>50</weight>
+                    </font>
+                  </property>
+                  <property name="text">
+                    <string>Color mode:</string>
+                  </property>
+                </widget>
+              </item>
+              <item row="0" column="1">
+                <widget class="QComboBox" name="combosel_color_mode">
+                  <property name="maximumSize">
+                    <size>
+                      <width>80</width>
+                      <height>16777215</height>
+                    </size>
+                  </property>
+                </widget>
+              </item>
+              <item row="0" column="2">
+                <widget class="QColorBox" name="color_color">
+                  <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                    </sizepolicy>
+                  </property>
+                </widget>
+              </item>
+              <!--================================================================-->
+              <item row="1" column="0" colspan="3">
+                <widget class="QWidget" name="cmap_attributes">
+                  <layout class="QGridLayout" name="cmap_grid">
+                    <property name="leftMargin">
+                      <number>0</number>
+                    </property>
+                    <property name="topMargin">
+                      <number>0</number>
+                    </property>
+                    <property name="rightMargin">
+                      <number>0</number>
+                    </property>
+                    <property name="bottomMargin">
+                      <number>0</number>
+                    </property>
+                    <property name="horizontalSpacing">
+                      <number>10</number>
+                    </property>
+                    <property name="verticalSpacing">
+                      <number>5</number>
+                    </property>
+                    <!--================================================================-->
+                    <item row="0" column="0">
+                      <widget class="QLabel" name="label_cmap_attribute" alignment="Qt::AlignRight|Qt::AlignVCenter">
+                        <property name="font">
+                          <font>
+                            <weight>50</weight>
+                          </font>
+                        </property>
+                        <property name="text">
+                          <string>Attribute:</string>
+                        </property>
+                      </widget>
+                    </item>
+                    <item row="0" column="1" colspan="3">
+                      <widget class="QComboBox" name="combosel_cmap_att">
+                        <property name="sizeAdjustPolicy">
+                          <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                        </property>
+                      </widget>
+                    </item>
+                    <!--================================================================-->
+                    <item row="1" column="0">
+                      <widget class="QLabel" name="label_cmap_limits" alignment="Qt::AlignRight|Qt::AlignVCenter">
+                        <property name="font">
+                          <font>
+                            <weight>50</weight>
+                          </font>
+                        </property>
+                        <property name="text">
+                          <string>Limits:</string>
+                        </property>
+                      </widget>
+                    </item>
+                    <item row="1" column="1">
+                      <widget class="QLineEdit" name="valuetext_cmap_vmin"/>
+                    </item>
+                    <item row="1" column="2">
+                      <widget class="QToolButton" name="button_flip_cmap">
+                        <property name="font">
+                          <font>
+                            <pointsize>12</pointsize>
+                          </font>
+                        </property>
+                        <property name="styleSheet">
+                          <string notr="true">padding: 0px</string>
+                        </property>
+                        <property name="text">
+                          <string>⇄</string>
+                        </property>
+                      </widget>
+                    </item>
+                    <item row="1" column="3">
+                      <widget class="QLineEdit" name="valuetext_cmap_vmax"/>
+                    </item>
+                    <!--================================================================-->
+                    <item row="2" column="0">
+                      <widget class="QLabel" name="label_colormap" alignment="Qt::AlignRight|Qt::AlignVCenter">
+                        <property name="font">
+                          <font>
+                            <weight>50</weight>
+                          </font>
+                        </property>
+                        <property name="text">
+                          <string>Colormap:</string>
+                        </property>
+                      </widget>
+                    </item>
+                    <item row="2" column="1" colspan="3">
+                      <widget class="QColormapCombo" name="combodata_cmap">
+                        <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                            <horstretch>0</horstretch>
+                            <verstretch>0</verstretch>
+                          </sizepolicy>
+                        </property>
+                        <property name="sizeAdjustPolicy">
+                          <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                        </property>
+                      </widget>
+                    </item>
+                    <!--================================================================-->
+                  </layout>
+                </widget>
+              </item>
+              <!--================================================================-->
+              <item row="2" column="0">
+                <widget class="QLabel" name="label_7" alignment="Qt::AlignRight|Qt::AlignVCenter">
+                  <property name="font">
+                    <font>
+                      <weight>50</weight>
+                    </font>
+                  </property>
+                  <property name="text">
+                    <string>Opacity:</string>
+                  </property>
+                </widget>
+              </item>
+              <item row="2" column="1" colspan="2">
+                <widget class="QLineEdit" name="valuetext_alpha"/>
+                <!-- <widget class="QLineEdit" name="valuetext_cmap_vmin"/> -->
+              </item>
+              <!--================================================================-->
+              <item row="3" column="0">
+                <spacer name="verticalSpacer_2">
+                  <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                    <size>
+                      <width>20</width>
+                      <height>40</height>
+                    </size>
+                  </property>
+                </spacer>
+              </item>
+              <item row="3" column="1" colspan="2">
+                <spacer name="horizontalSpacer_5">
+                  <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                    <size>
+                      <width>40</width>
+                      <height>1</height>
+                    </size>
+                  </property>
+                </spacer>
+              </item>
+              <!--================================================================-->
+            </layout>
+          </widget>
+          <!--================================================================-->
+          <!-- <widget class="QWidget" name="tab_2">
       <attribute name="title">
        <string>Points</string>
       </attribute>
@@ -441,14 +455,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>show</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -457,7 +471,7 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="layoutDirection">
@@ -467,7 +481,7 @@
           <string>limits</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -486,14 +500,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>dpi</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -505,7 +519,7 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="layoutDirection">
@@ -515,7 +529,7 @@
           <string>attribute</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -524,7 +538,7 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="layoutDirection">
@@ -534,7 +548,7 @@
           <string>scaling</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -543,7 +557,7 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="layoutDirection">
@@ -553,7 +567,7 @@
           <string>size</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -620,14 +634,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>type</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -653,14 +667,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>stretch</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -689,14 +703,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>contrast</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -712,14 +726,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>fill</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -732,7 +746,7 @@
        </item>
       </layout>
      </widget> -->
-     <!-- <widget class="QWidget" name="tab_3">
+          <!-- <widget class="QWidget" name="tab_3">
       <attribute name="title">
        <string>Line</string>
       </attribute>
@@ -780,14 +794,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>width</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -812,14 +826,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>style</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -828,14 +842,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>show</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -848,7 +862,7 @@
        </item>
       </layout>
      </widget> -->
-     <!-- <widget class="QWidget" name="tab">
+          <!-- <widget class="QWidget" name="tab">
       <attribute name="title">
        <string>Errors</string>
       </attribute>
@@ -930,7 +944,7 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
@@ -943,7 +957,7 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
@@ -966,7 +980,7 @@
        </item>
       </layout>
      </widget> -->
-     <!-- <widget class="QWidget" name="tab_5">
+          <!-- <widget class="QWidget" name="tab_5">
       <attribute name="title">
        <string>Vectors</string>
       </attribute>
@@ -1008,14 +1022,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>show</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -1031,14 +1045,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>vx</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -1063,14 +1077,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>arrow</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -1082,14 +1096,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>type</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -1105,14 +1119,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>vy</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -1121,14 +1135,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>origin</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -1170,14 +1184,14 @@
          <property name="font">
           <font>
            <weight>75</weight>
-           <bold>true</bold>
+           
           </font>
          </property>
          <property name="text">
           <string>scaling</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <set>Qt::AlignRight|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -1199,22 +1213,22 @@
        </item>
       </layout>
      </widget> -->
-    </widget>
-   </item>
-  </layout>
- </widget>
- <customwidgets>
-  <customwidget>
-   <class>QColorBox</class>
-   <extends>QLabel</extends>
-   <header>glue.utils.qt.colors</header>
-  </customwidget>
-  <customwidget>
-   <class>QColormapCombo</class>
-   <extends>QComboBox</extends>
-   <header>glue.utils.qt.colors</header>
-  </customwidget>
- </customwidgets>
- <resources/>
- <connections/>
+        </widget>
+      </item>
+    </layout>
+  </widget>
+  <customwidgets>
+    <customwidget>
+      <class>QColorBox</class>
+      <extends>QLabel</extends>
+      <header>glue.utils.qt.colors</header>
+    </customwidget>
+    <customwidget>
+      <class>QColormapCombo</class>
+      <extends>QComboBox</extends>
+      <header>glue.utils.qt.colors</header>
+    </customwidget>
+  </customwidgets>
+  <resources/>
+  <connections/>
 </ui>

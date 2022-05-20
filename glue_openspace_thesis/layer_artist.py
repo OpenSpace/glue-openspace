@@ -1,459 +1,320 @@
-import os
-from threading import Thread
-import socket
-import uuid
-import time
-import shutil
-import tempfile
-from matplotlib.colors import to_hex, to_rgb, LinearSegmentedColormap, ListedColormap
+from typing import TYPE_CHECKING, Any, Union
+from matplotlib.colors import to_hex, to_rgb
+from astropy import units
+from astropy.coordinates import SkyCoord, Distance, BaseCoordinateFrame
 
 from glue.core import Data, Subset
 from glue.viewers.common.layer_artist import LayerArtist
-from glue.utils.qt import messagebox_on_error
-from glue.utils import ensure_numerical
+import numpy as np
 
 from .layer_state import OpenSpaceLayerState
-from .utils import (get_point_data, protocol_version, WAIT_TIME, SIMPMessageType,
-                    color_string_to_hex, get_eight_bit_list, float_to_hex, 
-                    hex_to_float, int_to_hex, hex_to_int, SEP)
+from .viewer_state import OpenSpaceViewerState
+from .simp import simp
+from .utils import (
+    get_normalized_list_of_equal_strides, float_to_hex,
+    filter_lon_lat, filter_cartesian
+)
 
 __all__ = ['OpenSpaceLayerArtist']
 
-# TODO move this to later
-# TODO make this image selectable by user
-TEXTURE_ORIGIN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
-TEXTURE = tempfile.mktemp(suffix='.png')
-shutil.copy(TEXTURE_ORIGIN, TEXTURE)
-CMAP_PROPERTIES = set(['cmap_mode', 'cmap_att', 'cmap_vmin', 'cmap_vmax', 'cmap'])
-
-class DisconnectionException(Exception):
-    pass
-
-class SocketDataEmptyException(Exception):
-    pass
+POINT_DATA_PROPERTIES = set([
+    "x_att",
+    "y_att",
+    "z_att",
+    "cartesian_unit_att",
+    "lon_att",
+    "lat_att",
+    "lum_att",
+    "vel_att",
+    "alt_att",
+    "alt_unit"
+])
+CMAP_PROPERTIES = set(['color_mode', 'cmap_vmin', 'cmap_vmax', 'cmap'])
+CMAP_ATTR_PROPERTIES = set(['color_mode', 'cmap_att'])
 
 class OpenSpaceLayerArtist(LayerArtist):
     _layer_state_cls = OpenSpaceLayerState
+
+    state: OpenSpaceLayerState
+    _viewer_state: OpenSpaceViewerState
+
+    if TYPE_CHECKING:
+        from .viewer import OpenSpaceDataViewer
+        _viewer: OpenSpaceDataViewer
+
+    will_send_message: bool
+
+    _has_sent_initial_data: bool
+
+    _display_name: str
+
+    _removed_indices: np.ndarray
+
+    has_updated_points: bool
 
     def __init__(self, viewer, *args, **kwargs):
         super(OpenSpaceLayerArtist, self).__init__(*args, **kwargs)
 
         self._viewer = viewer
-        self._viewer.set_conn_disc_button(self.conn_disc_button_action) # Set functionality for button
-        self._viewer.set_close_event_action(self.send_disconnect_message) # Set close event actions
 
-        self.state.add_global_callback(self._on_attribute_change)
-        self._viewer_state.add_global_callback(self._on_attribute_change)
+        self.state.add_global_callback(self.update)
+        self._viewer_state.add_global_callback(self.update)
 
-        self._uuid = None
         self._display_name = None
         self._state = None
 
-        self._socket = None
-
-        self._thread_running = False
-        self._threadCommsRx = None
-
-        self._is_connected = False
-        self._is_connecting = False
-        self._lost_connection = False
         self.will_send_message = True
         # self.has_luminosity_data = False
         # self.has_velocity_data = False
 
-    def start_socket_thread(self):
-        if (self._threadCommsRx == None) or (not self._threadCommsRx.is_alive()): 
-            self._lost_connection = False
-            self._threadCommsRx = Thread(target=self.request_listen)
-            self._thread_running = True
-            self._threadCommsRx.start()
+        self._has_sent_initial_data = False
+        self.has_updated_points = False
 
-    def stop_socket_thread(self):
-        self._thread_running = False
-        self._threadCommsRx = None
-
-    def _on_attribute_change(self, **kwargs):
-        if self._socket is None:
-            return
-
-        if self._viewer_state.lon_att is None or self._viewer_state.lat_att is None:
-            return
-        
-        # if self.state is not None:
-        #     vmin = state.cmap_vmin
-        #     vmax = state.cmap_vmax
-        #     cmap = state.cmap
-
+    def _on_attribute_change(self, force):
         changed = self.pop_changed_properties()
-        force = kwargs.get('force', False)
 
         if len(changed) == 0 and not force:
             return
 
+        self._clean_properties(changed)
+
+        if self._viewer._socket is None:
+            return
+
+        if self._viewer_state.coordinate_system == 'Cartesian'\
+        and (self._viewer_state.x_att is None or self._viewer_state.y_att is None\
+        or self._viewer_state.z_att is None):
+            return
+
+        if self._viewer_state.coordinate_system != 'Cartesian'\
+        and (self._viewer_state.lon_att is None or self._viewer_state.lat_att is None):
+            return
+        
         # If properties update in Glue, send message to OpenSpace with new values
-        if self._uuid is not None:
-            if self.will_send_message is False:
-                return
+        if self.will_send_message is False:
+            return
 
-            message_type = ""
-            subject = ""
-            identifier, length_of_identifier = self.get_identifier_str()
+        has_changed_color_map = any(prop in changed for prop in CMAP_PROPERTIES) and self.state.color_mode == 'Linear'
+        has_changed_color_map_att = any(prop in changed for prop in CMAP_ATTR_PROPERTIES) and self.state.color_mode == 'Linear'
+        point_data_changed = any(prop in changed for prop in POINT_DATA_PROPERTIES)
 
-            # TODO: Change so it only sends message on release of slider
-            # Now it sends a message with every move of the slider
-            if "alpha" in changed:
-                message_type = SIMPMessageType.Opacity
-                value, length_of_value = self.get_opacity_str()
-                subject = length_of_identifier + identifier + length_of_value + value
+        if 'alpha' in changed:
+            self.send_opacity()
 
-            elif "color" in changed and self.state.cmap_mode is 'Fixed':
-                message_type = SIMPMessageType.Color
-                value, length_of_value = self.get_color_str()
-                subject = length_of_identifier + identifier + length_of_value + value
+        if 'color' in changed and self.state.color_mode == 'Fixed':
+            self.send_fixed_color()
 
-            elif "size" in changed:
-                message_type = SIMPMessageType.Size
-                value, length_of_value = self.get_size_str()
-                subject = length_of_identifier + identifier + length_of_value + value
+        if has_changed_color_map:
+            self.send_color_map()
 
-            elif "visible" in changed:
-                message_type = SIMPMessageType.Visibility
-                if self.state.visible is False:
-                    value = "F"
-                elif self.state.visible is True:
-                    value = "T"
-                else:
-                    return
-                subject = length_of_identifier + identifier + value
+        if has_changed_color_map_att:
+            self.send_color_map_attrib_data()
 
-            if any(prop in changed for prop in CMAP_PROPERTIES) \
-                and self.state.cmap_mode is 'Linear':
-                message_type = SIMPMessageType.ColorMap
-                subject = self.get_cmap_subject(identifier)
+        if 'size' in changed:
+            self.send_fixed_size()
 
-            # TODO: Setup for GUI name change
+        if 'visible' in changed:
+            self.send_visibility()
 
-            # print(f"message_type={message_type}, subject={subject}")
-            # Send the correct message to OpenSpace
-            if subject:
-                self.send_simp_message(message_type, subject)
-                self.redraw()
-                return
+        if point_data_changed:
+            self.send_point_data()
 
-            # On reselect of subset data, remove old scene graph node and resend data
-            if isinstance(self.state.layer, Subset):
-                state = self.state.layer.subset_state
-                if state is not self._state:
-                    self._state = state
-                    self.remove_scene_graph_node()
-                    self.send_point_data()
-                    self.redraw()
-                return
+            if self.has_updated_points:
+                self.send_color_map_attrib_data()
+                self.has_updated_points = False
 
-        self.clear() # TODO: WHY?
+        # # On reselect of subset data, remove old scene graph node and resend data
+        # if isinstance(self.state.layer, Subset):
+        #     state = self.state.layer.subset_state
+        #     if state is not self._state:
+        #         self._state = state
+        #         # self.send_remove_sgn() # Should not be needed anymore
+        #         self.send_point_data()
+        #         self.redraw()
+        #     return
 
-        # Store state of subset to track changes from reselection of subset
-        if isinstance(self.state.layer, Subset):
-            self._state = self.state.layer.subset_state
+        # # Store state of subset to track changes from reselection of subset
+        # if isinstance(self.state.layer, Subset):
+        #     self._state = self.state.layer.subset_state
 
-        self.send_point_data()
+        # Send the correct message to OpenSpace
+        # if send_update_message:
+        #     simp.send_simp_message(self._viewer, message_type, subject)
+        # else:
+        #     self.send_point_data()
+
         self.redraw()
+
+    def _clean_properties(self, changed):
+        if "alpha" in changed:
+            if self.state.alpha > 1.0:
+                self.state.alpha = 1.0
+            elif self.state.alpha < 0.0:
+                self.state.alpha = 0.0
+
+        elif "size" in changed:
+            if self.state.size > 30.0:
+                self.state.size = 30.0
+            elif self.state.size < 0.0:
+                self.state.size = 0.0
+
+    def receive_message(self, message_type: simp.SIMPMessageType, subject: str, offset: int):
+        # Update Color
+        if message_type == simp.SIMPMessageType.Color:
+            color, offset = simp.read_color(subject, offset)
+            color_value = to_hex(color, keep_alpha=False)
+
+            self.will_send_message = False
+            self.state.color = color_value
+
+        # Update Opacity
+        elif message_type == simp.SIMPMessageType.Opacity:
+            opacity_value, offset = simp.read_float(subject, offset)
+
+            self.will_send_message = False
+            self.state.alpha = opacity_value
+
+        # Update Size
+        elif message_type == simp.SIMPMessageType.Size:
+            size_value, offset = simp.read_float(subject, offset)
+            
+            self.will_send_message = False
+            self.state.size = size_value
+
+        # Toggle Visibility
+        elif message_type == simp.SIMPMessageType.Visibility:
+            visibility_value, offset = simp.read_string(subject, offset)
+            self.will_send_message = False
+
+            self.state.visible = visibility_value == "T"
+
+        self.will_send_message = True
+        self.redraw()
+
+    def send_opacity(self):
+        subject = self.get_subject_prefix() + self.get_opacity_str() + simp.SEP
+        simp.send_simp_message(self._viewer, simp.SIMPMessageType.Opacity, subject)
+
+    def send_fixed_color(self):
+        subject = self.get_subject_prefix() + self.get_color_str() + simp.SEP
+        simp.send_simp_message(self._viewer, simp.SIMPMessageType.Color, subject)
+
+    def send_color_map(self):
+        vmin_str, vmax_str = self.get_color_map_limits_str()
+        color_map_str, n_colors_str = self.get_color_map_str()
+
+        subject = (
+            self.get_subject_prefix() +
+            vmin_str + simp.SEP +
+            vmax_str + simp.SEP +
+            n_colors_str + simp.SEP +
+            color_map_str + simp.SEP
+        )
+        simp.send_simp_message(self._viewer, simp.SIMPMessageType.ColorMap, subject)
+
+    def send_color_map_attrib_data(self):
+        color_map_attrib_data_str, n_attrib_data_str = self.get_color_map_attrib_data_str()
+        subject = (
+            self.get_subject_prefix() +
+            "ColormapAttributeData" + simp.SEP +
+            n_attrib_data_str + simp.SEP +
+            color_map_attrib_data_str + simp.SEP
+        )
+        simp.send_simp_message(self._viewer, simp.SIMPMessageType.ColorMapAttributeData, subject)
+
+    def send_fixed_size(self):
+        subject = self.get_subject_prefix() + self.get_size_str() + simp.SEP
+        simp.send_simp_message(self._viewer, simp.SIMPMessageType.Size, subject)
+
+    def send_visibility(self):
+        visible_str = 'T' if self.state.visible else 'F'
+        subject = self.get_subject_prefix() + visible_str + simp.SEP
+        simp.send_simp_message(self._viewer, simp.SIMPMessageType.Visibility, subject)
 
     # Create and send a message including the point data to OpenSpace
     def send_point_data(self):
         # Create string with coordinates for point data
         try:
-            # Create a random identifier
-            self._uuid = str(uuid.uuid4())
-            if isinstance(self.state.layer, Data):
-                self._display_name = self.state.layer.label
-            else:
-                self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
-
-            identifier, length_of_identifier = self.get_identifier_str()
-            color, length_of_color = self.get_color_str()
-            opacity, length_of_opacity = self.get_opacity_str()
-            gui_name, length_gui_name = self.get_gui_name_str()
-            size, length_of_size = self.get_size_str()
-
-            point_data = get_point_data(self.state.layer,
-                                        self._viewer_state.lon_att,
-                                        self._viewer_state.lat_att,
-                                        alternative_attribute=self._viewer_state.alt_att,
-                                        alternative_unit=self._viewer_state.alt_unit,
-                                        frame=self._viewer_state.frame)
-
-            print(f'len(point_data)={len(point_data)}')
-
+            point_data_str, n_points_str = self.get_coordinates_str()
+            self._viewer.log(f'Sending {n_points_str} points to OpenSpace')
             subject = (
-                identifier + SEP +
-                color + SEP +
-                opacity + SEP +
-                size + SEP +
-                gui_name + SEP +
-                int_to_hex(len(point_data)) + SEP +
-                int_to_hex(3) + SEP +
-                point_data + SEP
+                self.get_subject_prefix() +
+                n_points_str + simp.SEP +
+                str(3) + simp.SEP +
+                point_data_str + simp.SEP
             )
-            print(f'length_gui_name={length_gui_name}')
-            self.send_simp_message(SIMPMessageType.PointData, subject)
+            simp.send_simp_message(self._viewer, simp.SIMPMessageType.PointData, subject)
 
-            # If in linear cmap mode, send cmap message as well
-            if self.state.cmap_mode is 'Linear':
-                time.sleep(WAIT_TIME * 100) # TODO: Is there another way to make sure the renderable exists before we send a message to change it?
-                self.send_simp_message(SIMPMessageType.ColorMap, self.get_cmap_subject(identifier))
-            
         except Exception as exc:
-            print(str(exc))
-            return
+            self._viewer.log(f'Exception in send_point_data: {str(exc)}')
+
+    def get_subject_prefix(self) -> str:
+        identifier = self.get_identifier_str()
+        gui_name = self.get_gui_name_str()
+        return identifier + simp.SEP + gui_name + simp.SEP
+
+    def send_initial_data(self):
+        self.send_point_data()
+        self.send_fixed_size()
+        self.send_opacity()
+        self.send_visibility()
+
+        if self.state.color_mode == 'Linear':
+            # If in color map mode, send color map messages
+            self.send_color_map()
+            self.send_color_map_attrib_data()
+        else:
+            self.send_fixed_color()
+
+        self._has_sent_initial_data = True
 
     # Create and send "Remove Scene Graph Node" message to OS
-    def remove_scene_graph_node(self):
-        message_type = SIMPMessageType.RemoveSceneGraphNode
-        subject = self._uuid
-        self.send_simp_message(message_type, subject)
-
-    def request_listen(self):
-        print('Socket listener running...')
-        try:
-            max_connection_check_retries = 6000
-            connection_check_retries = 0
-            while self._thread_running:
-                if self._lost_connection:
-                    raise Exception('Lost connection to OpenSpace...')
-
-                if self._is_connecting:
-                    # If it takes more than 6000 (approx 60 seconds when WAIT_TIME is 0.01s)
-                    # to connect to OpenSpace: cancel the connection attempt
-                    if int(connection_check_retries) > int(max_connection_check_retries):
-                        raise Exception("Connection timeout reached. Could not establish connection to OpenSpace...")
-
-                    connection_check_retries += 1
-                    self.receive_handshake()
-                    time.sleep(WAIT_TIME)
-                    continue
-                
-                if not self._is_connected:
-                    time.sleep(WAIT_TIME * 10)
-                    continue
-
-                self.receive_message()
-                time.sleep(WAIT_TIME * 10) # TODO: Is this needed?
-
-        except DisconnectionException:
-            pass
-
-        except Exception as ex:
-            print(str(ex))
-
-        finally:
-            print('Socket listener shutdown...')
-            self.disconnect_from_openspace()
-
-    def read_socket(self):
-        message_received = self._socket.recv(4096).decode('ascii')
-
-        if len(message_received) < 1:
-            print(f'Received message had no content. Aborted.')
-            raise SocketDataEmptyException
-
-        return message_received
-
-    def parse_message(self, message):
-        # Start and end are message offsets
-        start = 0
-        end = 3
-        protocol_version_in = message[start:end]
-        if protocol_version_in != protocol_version:
-            print('Mismatch in protocol versions')
-            raise DisconnectionException
-
-        start = end
-        end = start + 4 
-        message_type = message[start:end]
-
-        start = end
-        end = start + 15
-        length_of_subject = int(message[start: end])
-
-        start = end
-        end = start + length_of_subject
-        subject = message[start:end]
-
-        return message_type, subject
-
-    # Connection handshake to ensure connection is established
-    def receive_handshake(self):
-        try:
-            message_received = self.read_socket()
-        except:
-            return
-
-        message_type, _ = self.parse_message(message_received)
-
-        print(message_type)
-        if message_type != SIMPMessageType.Connection:
-            return
-
-        self._is_connected = True
-        self._is_connecting = False
-        self._viewer._conn_disc_button.setText('Disconnect') # Set button text
-        self._viewer._conn_disc_button.setEnabled(True) # Set button enabled/disabled
-        print('Connected to OpenSpace')
-
-        # Update layers to trigger sending of data
-        for layer in self._viewer.layers:
-            layer.update()
-
-    def receive_message(self):
-        try:
-            message_received = self.read_socket()
-        except:
-            return
-
-        message_type, subject = self.parse_message(message_received)
-
-        print(f'\tReceived new message: \'{message_type}\'')
-
-        if message_type == SIMPMessageType.Disconnection:
-            raise DisconnectionException
-
-        # Resetting message offsets to read from subject
-        start = 0
-        end = 2
-        length_of_identifier = int(subject[start:end])
-        start += 2
-        end += length_of_identifier
-        identifier = subject[start:end]
-        start += length_of_identifier
-        if message_type == SIMPMessageType.Color:
-            end += 2
-        else:
-            end += 1
-
-        for layer in self._viewer.layers:
-            if layer._uuid != identifier:
-                continue
-
-            # Update Color
-            if message_type == SIMPMessageType.Color:
-                length_of_value = int(subject[start:end])
-                start = end
-                end += length_of_value
-
-                color_value, alpha = color_string_to_hex(subject[start + 1:end - 1])
-
-                self.will_send_message = False
-                layer.state.color = color_value
-                break
-
-            # Update Opacity
-            elif message_type == SIMPMessageType.Opacity:
-                length_of_value = int(subject[start:end])
-                start = end
-                end += length_of_value
-
-                opacity_value = float(subject[start:end])
-
-                self.will_send_message = False
-                layer.state.alpha = opacity_value
-                break
-
-            # Update Size
-            elif message_type == SIMPMessageType.Size:
-                length_of_value = int(subject[start:end])
-                start = end
-                end += length_of_value
-
-                size_value = float(subject[start:end])
-
-                self.will_send_message = False
-                layer.state.size = size_value
-                break
-
-            # Toggle Visibility
-            elif message_type == SIMPMessageType.Visibility:
-                visibility_value = subject[start]
-                self.will_send_message = False
-
-                layer.state.visible = visibility_value == "T"
-
-        time.sleep(WAIT_TIME) # TODO: Is this needed?
-        self.will_send_message = True
-        self.redraw()
+    def send_remove_sgn(self):
+        message_type = simp.SIMPMessageType.RemoveSceneGraphNode
+        subject = self.get_identifier_str() + simp.SEP
+        simp.send_simp_message(self._viewer, message_type, subject)
 
     def clear(self):
-        if self._socket is None:
-            return
-        if self._uuid is None:
+        if self._viewer._socket is None:
             return
 
-        self.remove_scene_graph_node()
-        self._uuid = None
+        self.send_remove_sgn()
         self.redraw()
 
-    def update(self):
-        if self._socket is None:
-            return
-        self._on_attribute_change(force=True)
+    def update(self, **kwargs):
+        # if isinstance(self.state.layer, Data) or isinstance(self.state.layer, Subset):
+        #     self._viewer.check_and_add_instance(self.state.layer)
 
-    @messagebox_on_error('An error occurred when trying to reset socket:', sep=' ')
-    def reset_socket(self):
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM,socket.IPPROTO_TCP)
-        self._socket.settimeout(0.0)
-        self._socket = socket.create_connection(('localhost', 4700))
-        # self._socket = socket.connect(('localhost', 4700))
-
-    @messagebox_on_error('An error occurred when trying to connect or disconnect from OpenSpace:', sep=' ')
-    def conn_disc_button_action(self, *args):
-        if self._is_connected:
-            self.send_disconnect_message()
-        else:
-            self.connect_to_openspace()
-
-    @messagebox_on_error('An error occurred when trying to connect to OpenSpace:', sep=' ')
-    def connect_to_openspace(self, *args):
-        print('Connecting to OpenSpace...')
-        self._viewer._conn_disc_button.setEnabled(False) # Set button enabled/disabled
-        self._viewer._conn_disc_button.setText('Connecting...') # Set button text
-
-        self.start_socket_thread()
-        self.reset_socket()
-
-        # Send "Connection" message to OpenSpace
-        self.send_simp_message(SIMPMessageType.Connection, 'Glue')
-        self._is_connecting = True
-
-    @messagebox_on_error('An error occurred when trying to send disconnection message to OpenSpace:', sep=' ')
-    def send_disconnect_message(self, *args):
-        # Send "DISC" message to OpenSpace
-        self.send_simp_message(SIMPMessageType.Disconnection)
-        
-    def disconnect_from_openspace(self):
-        self.stop_socket_thread()
-
+        force = kwargs.get('force', False)
         try:
-            self._socket.shutdown(socket.SHUT_RDWR)
-            self._socket.close()
-        except:
-            print('Couldn\'t shutdown socket to OpenSpace.')
-        finally:
-            self._socket = None
-            self._is_connected = False
-            self._uuid = None
+            if self.get_identifier_str() is None:
+                gui_name = self.get_gui_name_str()
+                if gui_name is None:
+                    raise simp.SimpError("Cannot set GUI name")
 
-        self._is_connected = False
-        self._is_connecting = False
-        self._lost_connection = False
-        self._viewer._conn_disc_button.setText('Connect') # Set button text
-        self._viewer._conn_disc_button.setEnabled(True) # Set button enabled/disabled
-        print('Disconnected from OpenSpace')
+        except simp.SimpError as exc:
+            self._viewer.log(f'Exception in update: {exc.message}')
+            return
 
-    def get_identifier_str(self):
-        identifier = self._uuid
-        return identifier, str(len(identifier))
+        except Exception as exc:
+            self._viewer.log(f'Exception in update: {exc}')
+            return
 
-    def get_color_str(self, color=None):
+        if self._viewer._socket is None:
+            return
+
+        if self._has_sent_initial_data:
+            self._on_attribute_change(force)
+        else:
+            self.send_initial_data()
+
+    def get_identifier_str(self) -> Union[str, None]:
+        if isinstance(self.state.layer, Data) or isinstance(self.state.layer, Subset):
+            return self.state.layer.uuid
+        else:
+            return
+
+    def get_color_str(self, color=None) -> str:
         """
         `color` should be [r, g, b] or [r, g, b, a].
         If `color` isn't specified, self.state.color 
@@ -464,96 +325,148 @@ class OpenSpaceLayerArtist(LayerArtist):
                                             else [0.0,1.0,0.0,1.0])
         else:
             if not isinstance(color, list):
-                print('The provided color is not of type list...')
+                self._viewer.log('The provided color is not of type list...')
                 return
 
         r = float_to_hex(color[0])
         g = float_to_hex(color[1])
         b = float_to_hex(color[2])
         a = float_to_hex(color[3] if (len(color) == 4) else 1.0)
-        return '[' + r + SEP + g + SEP + b + SEP + a + SEP + ']', str(len(color))
 
-    def get_opacity_str(self):
-        # Round up to 7 decimals to avoid length_of_value being double digits
-        # since OpenSpace expects the length_of_value to be 1 byte of the subject
-        # opacity = str(round(self.state.alpha, 7))
+        return '[' + r + simp.SEP + g + simp.SEP + b + simp.SEP + a + simp.SEP + ']'
+
+    def get_opacity_str(self) -> str:
         opacity = float_to_hex(self.state.alpha)
-        return opacity, str(len(opacity))
+        return opacity
 
-    def get_gui_name_str(self):
+    def get_gui_name_str(self) -> Union[str, None]:
+        if isinstance(self.state.layer, Data):
+            self._display_name = self.state.layer.label
+        elif isinstance(self.state.layer, Subset):
+            self._display_name = self.state.layer.label + ' (' + self.state.layer.data.label + ')'
+        else:
+            return
+        
         gui_name = self._display_name
-        clean_gui_name = ''
+        clean_gui_name: str = ''
 
         # Escape all potential occurences of the separator character inside the gui name
         for i in range(len(gui_name)):
-            if (gui_name[i] == SEP):
+            if (gui_name[i] == simp.SEP):
                 clean_gui_name += '\\'
             clean_gui_name += gui_name[i]
 
-        return clean_gui_name, str(len(clean_gui_name))
+        return clean_gui_name
         
-    def get_size_str(self):
-        # size = str(self.state.size)
+    def get_size_str(self) -> str:
         size = float_to_hex(self.state.size)
-        return size, str(len(size))
-    
-    def get_rgb_from_cmap(self, scalar):
-        """
-        Returns a list of a 6 decimals R, G, B
-        value based on the scalar value in the cmap.
-        [R,G,B]
-        """
-        rgb = self.state.cmap(scalar)
-        return [round(ch, 6) for ch in rgb]
+        return size
 
-    def get_linear_segmented_cmap_for_simp(self):
-        return [self.get_rgb_from_cmap(x) for x in get_eight_bit_list()]
+    def get_coordinates_str(self) -> tuple[str, str]:
+        if self._viewer_state.coordinate_system == 'Cartesian':
+            self.has_updated_points = True
+            x, y, z, self._removed_indices = filter_cartesian(
+                self.state.layer[self._viewer_state.x_att],
+                self.state.layer[self._viewer_state.y_att],
+                self.state.layer[self._viewer_state.z_att]
+            )
 
-    def send_simp_message(self, message_type, subject=''):
-        time.sleep(WAIT_TIME)
-        length_of_subject = str(format(len(subject), '015d')) # formats to a 15 character string
-        message = protocol_version + message_type + length_of_subject + subject
-
-        subject_print_str = ', Subject[0:' + (length_of_subject if len(subject) < 40 else "40")
-        subject_print_str += ']: ' + (subject if len(subject) < 40 else (subject[:40] + "..."))
-        print_str = 'Protocol version: ' + protocol_version\
-                    + ', Message type: ' + message_type\
-                    + subject_print_str
-        print(f'Sending SIMP message: ({print_str})')
-
-        if self._is_connecting:
-            print('Wait until plugin is connected to OpenSpace...')
-            return
-        
-        try:
-            self._socket.sendall(bytes(message, 'utf-8'))
-        except:
-            self._lost_connection = True
-
-        # Wait for a short time to avoid sending too many messages in quick succession
-        time.sleep(WAIT_TIME)
-
-    def get_cmap_str_for_simp(self):
-        cmap_for_simp = None
-        if hasattr(self.state.cmap, 'colors'):
-            cmap_for_simp = self.state.cmap.colors
-            cmap_for_simp = [[c[0], c[1], c[2], 1.0] for c in cmap_for_simp]
+            if self._viewer_state.cartesian_unit_att is not None and self._viewer_state.cartesian_unit_att != 'pc':
+                # Get the unit from the gui
+                unit = units.Unit(self._viewer_state.cartesian_unit_att)
+                # Convert to parsec, since that's what OpenSpace wants
+                x = (x * unit).to_value(units.pc)
+                y = (y * unit).to_value(units.pc)
+                z = (z * unit).to_value(units.pc)
+            
         else:
-            cmap_for_simp = self.get_linear_segmented_cmap_for_simp()
+            frame = self._viewer_state.coordinate_system.lower()
+            unit = units.Unit(self._viewer_state.alt_unit)
 
-        nr_of_colors = str(len(cmap_for_simp))
+            if self._viewer_state.alt_att is None or unit is None:
+                self.has_updated_points = True
+                longitude, latitude, _, self._removed_indices = filter_lon_lat(
+                    self.state.layer[self._viewer_state.lon_att],
+                    self.state.layer[self._viewer_state.lat_att]
+                )
 
-        cmap_simp_hex_str = ''
-        for color in cmap_for_simp:
-            color_hex_str, len_color_hex_str = self.get_color_str(color)
-            cmap_simp_hex_str += color_hex_str
+                # Get cartesian coordinates on unit galactic sphere
+                coordinates = SkyCoord(longitude, latitude, unit='deg', frame=frame)
+                x, y, z = coordinates.galactic.cartesian.xyz
 
-        return cmap_simp_hex_str, nr_of_colors
+                # Convert to be on a sphere of radius 100pc
+                radius = 100 * units.pc
+                x *= radius
+                y *= radius
+                z *= radius
 
-    def get_cmap_subject(self, identifier):
-        # scalars_for_points = ensure_numerical(self.layer[self.state.cmap_att].ravel())
-        # print(f'\tscalars_for_points = {scalars_for_points}')
+            else:
+                self.has_updated_points = True
+                longitude, latitude, distance, self._removed_indices = filter_lon_lat(
+                    self.state.layer[self._viewer_state.lon_att],
+                    self.state.layer[self._viewer_state.lat_att],
+                    self.state.layer[self._viewer_state.alt_att]
+                )
+                
+                # Get cartesian coordinates on unit galactic sphere
+                coordinates = SkyCoord(
+                    longitude * units.deg,
+                    latitude * units.deg,
+                    distance=distance * units.Unit(unit),
+                    frame=frame
+                )
+                x, y, z = coordinates.galactic.cartesian.xyz
 
-        cmap_simp_hex_str, nr_of_colors = self.get_cmap_str_for_simp()
-        subject = identifier + SEP + cmap_simp_hex_str + SEP# + vmin + SEP + vmax + SEP + scalars_for_points + SEP
-        return subject
+                # print(type(x), [str(_x) for _x in x])
+
+                # Convert coordinates to parsec
+                x = x.to_value(units.pc)
+                y = y.to_value(units.pc)
+                z = z.to_value(units.pc)
+
+        coordinates_string = ''
+        n_points_str = str(len(x))
+
+        for i in range(len(x)):
+            coordinates_string += "["\
+                + float_to_hex(float(x[i])) + simp.SEP\
+                + float_to_hex(float(y[i])) + simp.SEP\
+                + float_to_hex(float(z[i])) + simp.SEP + "]"
+
+        return coordinates_string, n_points_str
+    
+    def get_color_map_str(self) -> tuple[str, str]:
+        formatted_color_map = None
+        if hasattr(self.state.cmap, 'colors'):
+            formatted_color_map = [[c[0], c[1], c[2], 1.0] for c in self.state.cmap.colors]
+        else:
+            # Has no underlying colors we can simply reach (according to our research)
+            # Sample the color map with equal strides as many times as how many colors it's built with
+            number_of_samples = self.state.cmap.N if self.state.cmap.N is not None else 256
+            samples = get_normalized_list_of_equal_strides(number_of_samples)
+            formatted_color_map = [
+                [ch for ch in self.state.cmap(x)] for x in samples
+            ]
+
+        n_colors_str = str(len(formatted_color_map))
+        color_map_str = ''.join([self.get_color_str(color) for color in formatted_color_map])
+
+        return color_map_str, n_colors_str
+
+    def get_color_map_limits_str(self) -> tuple[str, str]:
+        vmin = float_to_hex(float(self.state.cmap_vmin))
+        vmax = float_to_hex(float(self.state.cmap_vmax))
+        return vmin, vmax
+
+    def get_color_map_attrib_data_str(self) -> tuple[str, str]:
+        attrib_data = self.state.layer[self.state.cmap_att]
+
+        # Filter away removed indices from list and convert to simp string
+        attrib_data = [
+            float_to_hex(float(x if not np.isnan(x) else 1.0))
+            for i, x in enumerate(attrib_data)
+            if i not in self._removed_indices
+        ]
+
+        return str(simp.SEP).join(attrib_data), str(len(attrib_data))
+
