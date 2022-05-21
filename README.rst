@@ -7,15 +7,6 @@ An experimental plugin was developed as part of the *Astrographics: Interactive 
 
 **2022**: Two master thesis students for OpenSpace, Jacob Molin & Victor Lindquist, are continuing the previous work by extending the Glue-OpenSpace integration.
 
-To try it out the 2020 verison::
-
-    pip install git+https://github.com/aniisabihi/glue-openspace-thesis.git
-    
-    Requires that the developer's version of OpenSpace is installed from the branch called 'thesis/2020/software-integration'
-    Guide: http://wiki.openspaceproject.com/
-    Branch: https://github.com/OpenSpace/OpenSpace/tree/thesis/2020/software-integration
-    
-
 To try it out the 2022 verison (work in progress)::
 
     pip install git+https://github.com/openspace/glue-openspace.git
@@ -23,4 +14,11 @@ To try it out the 2022 verison (work in progress)::
     Requires that the developer's version of OpenSpace is installed from the branch called 'thesis/2022/software-integration'
     Guide: http://wiki.openspaceproject.com/
     Branch: https://github.com/OpenSpace/OpenSpace/tree/thesis/2022/software-integration
+
+To try it out the 2020 verison::
+
+    pip install git+https://github.com/aniisabihi/glue-openspace-thesis.git
     
+    Requires that the developer's version of OpenSpace is installed from the branch called 'thesis/2020/software-integration'
+    Guide: http://wiki.openspaceproject.com/
+    Branch: https://github.com/OpenSpace/OpenSpace/tree/thesis/2020/software-integration
