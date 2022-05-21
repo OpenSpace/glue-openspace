@@ -42,10 +42,10 @@ class OpenSpaceLayerStateWidget(QWidget):
 
         if self.state.size_mode == 'Fixed':
             self.ui.size_map_attributes.hide()
-            self.ui.size_size.show()
+            # self.ui.size_size.show()
         elif self.state.size_mode == 'Linear':
             self.ui.size_map_attributes.show()
-            self.ui.size_size.hide()
+            # self.ui.size_size.hide()
 
     def _update_color_mode(self, *args):
         # self.state.color = '#00ff0s0'

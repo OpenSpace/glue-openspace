@@ -2,7 +2,7 @@ from enum import Enum
 import time
 from typing import TYPE_CHECKING, Any
 
-from .utils import POLL_RETRIES, WAIT_TIME, float_to_hex, hex_to_float
+from .utils import POLL_RETRIES, WAIT_TIME, hex_to_float
 
 if TYPE_CHECKING:
     from .viewer import OpenSpaceDataViewer
@@ -13,7 +13,7 @@ else:
 __all__ = ['simp']
 
 class Simp:
-    protocol_version = '1.8'
+    protocol_version = '1.9'
     SEP = ';'
 
     class SIMPMessageType(str, Enum):
@@ -23,9 +23,10 @@ class Simp:
         RemoveSceneGraphNode = 'RSGN'
         Color = 'FCOL'
         ColorMap = 'LCOL'
-        ColorMapAttributeData = 'ATDA'
+        AttributeData = 'ATDA'
         Opacity = 'FOPA'
-        Size = 'FPSI'
+        FixedSize = 'FPSI'
+        LinearSize = 'LPSI'
         Visibility = 'TOVI'
 
     class DisconnectionException(Exception):

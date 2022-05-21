@@ -29,8 +29,14 @@ POINT_DATA_PROPERTIES = set([
     "alt_att",
     "alt_unit"
 ])
+
+FIXED_COLOR_PROPERTIES = set(['color_mode', 'color'])
 CMAP_PROPERTIES = set(['color_mode', 'cmap_vmin', 'cmap_vmax', 'cmap'])
 CMAP_ATTR_PROPERTIES = set(['color_mode', 'cmap_att'])
+
+FIXED_SIZE_PROPERTIES = set(['size_mode', 'size'])
+SIZE_PROPERTIES = set(['size_mode', 'size', 'size_vmin', 'size_vmax'])
+SIZE_ATTR_PROPERTIES = set(['size_mode', 'size_att'])
 
 class OpenSpaceLayerArtist(LayerArtist):
     _layer_state_cls = OpenSpaceLayerState
@@ -94,14 +100,22 @@ class OpenSpaceLayerArtist(LayerArtist):
         if self.will_send_message is False:
             return
 
+        point_data_changed = any(prop in changed for prop in POINT_DATA_PROPERTIES)
+
+        has_changed_fixed_color = any(prop in changed for prop in FIXED_COLOR_PROPERTIES) and self.state.color_mode == 'Fixed'
         has_changed_color_map = any(prop in changed for prop in CMAP_PROPERTIES) and self.state.color_mode == 'Linear'
         has_changed_color_map_att = any(prop in changed for prop in CMAP_ATTR_PROPERTIES) and self.state.color_mode == 'Linear'
-        point_data_changed = any(prop in changed for prop in POINT_DATA_PROPERTIES)
+
+        has_changed_fixed_size = any(prop in changed for prop in FIXED_SIZE_PROPERTIES) and self.state.size_mode == 'Fixed'
+        has_changed_linear_size = any(prop in changed for prop in SIZE_PROPERTIES) and self.state.size_mode == 'Linear'
+        has_changed_linear_size_att = any(prop in changed for prop in SIZE_ATTR_PROPERTIES) and self.state.size_mode == 'Linear'
+
+        print(f'has_changed_linear_size_att={has_changed_linear_size_att}')
 
         if 'alpha' in changed:
             self.send_opacity()
 
-        if 'color' in changed and self.state.color_mode == 'Fixed':
+        if has_changed_fixed_color:
             self.send_fixed_color()
 
         if has_changed_color_map:
@@ -110,8 +124,14 @@ class OpenSpaceLayerArtist(LayerArtist):
         if has_changed_color_map_att:
             self.send_color_map_attrib_data()
 
-        if 'size' in changed:
+        if has_changed_fixed_size:
             self.send_fixed_size()
+            
+        if has_changed_linear_size:
+            self.send_linear_size()
+
+        if has_changed_linear_size_att:
+            self.send_linear_size_attrib_data()
 
         if 'visible' in changed:
             self.send_visibility()
@@ -153,8 +173,8 @@ class OpenSpaceLayerArtist(LayerArtist):
                 self.state.alpha = 0.0
 
         elif "size" in changed:
-            if self.state.size > 30.0:
-                self.state.size = 30.0
+            if self.state.size > 500.0:
+                self.state.size = 500.0
             elif self.state.size < 0.0:
                 self.state.size = 0.0
 
@@ -175,7 +195,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             self.state.alpha = opacity_value
 
         # Update Size
-        elif message_type == simp.SIMPMessageType.Size:
+        elif message_type == simp.SIMPMessageType.FixedSize:
             size_value, offset = simp.read_float(subject, offset)
             
             self.will_send_message = False
@@ -213,18 +233,39 @@ class OpenSpaceLayerArtist(LayerArtist):
         simp.send_simp_message(self._viewer, simp.SIMPMessageType.ColorMap, subject)
 
     def send_color_map_attrib_data(self):
-        color_map_attrib_data_str, n_attrib_data_str = self.get_color_map_attrib_data_str()
+        color_map_attrib_data_str, n_attrib_data_str = self.get_attrib_data_str(self.state.cmap_att)
         subject = (
             self.get_subject_prefix() +
             "ColormapAttributeData" + simp.SEP +
             n_attrib_data_str + simp.SEP +
             color_map_attrib_data_str + simp.SEP
         )
-        simp.send_simp_message(self._viewer, simp.SIMPMessageType.ColorMapAttributeData, subject)
+        simp.send_simp_message(self._viewer, simp.SIMPMessageType.AttributeData, subject)
 
     def send_fixed_size(self):
         subject = self.get_subject_prefix() + self.get_size_str() + simp.SEP
-        simp.send_simp_message(self._viewer, simp.SIMPMessageType.Size, subject)
+        simp.send_simp_message(self._viewer, simp.SIMPMessageType.FixedSize, subject)
+
+    def send_linear_size(self):
+        vmin_str, vmax_str = self.get_linear_size_limits_str()
+
+        subject = (
+            self.get_subject_prefix() +
+            self.get_size_str() + simp.SEP +
+            vmin_str + simp.SEP +
+            vmax_str + simp.SEP
+        )
+        simp.send_simp_message(self._viewer, simp.SIMPMessageType.LinearSize, subject)
+
+    def send_linear_size_attrib_data(self):
+        linear_size_attrib_data_str, n_attrib_data_str = self.get_attrib_data_str(self.state.size_att)
+        subject = (
+            self.get_subject_prefix() +
+            "LinearSizeAttributeData" + simp.SEP +
+            n_attrib_data_str + simp.SEP +
+            linear_size_attrib_data_str + simp.SEP
+        )
+        simp.send_simp_message(self._viewer, simp.SIMPMessageType.AttributeData, subject)
 
     def send_visibility(self):
         visible_str = 'T' if self.state.visible else 'F'
@@ -265,6 +306,13 @@ class OpenSpaceLayerArtist(LayerArtist):
             self.send_color_map_attrib_data()
         else:
             self.send_fixed_color()
+
+        if self.state.size_mode == 'Linear':
+            # If in color map mode, send color map messages
+            self.send_linear_size()
+            self.send_linear_size_attrib_data()
+        else:
+            self.send_fixed_size()
 
         self._has_sent_initial_data = True
 
@@ -362,6 +410,11 @@ class OpenSpaceLayerArtist(LayerArtist):
         size = float_to_hex(self.state.size)
         return size
 
+    def get_linear_size_limits_str(self) -> tuple[str, str]:
+        vmin = float_to_hex(float(self.state.size_vmin))
+        vmax = float_to_hex(float(self.state.size_vmax))
+        return vmin, vmax
+
     def get_coordinates_str(self) -> tuple[str, str]:
         if self._viewer_state.coordinate_system == 'Cartesian':
             self.has_updated_points = True
@@ -440,7 +493,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         if hasattr(self.state.cmap, 'colors'):
             formatted_color_map = [[c[0], c[1], c[2], 1.0] for c in self.state.cmap.colors]
         else:
-            # Has no underlying colors we can simply reach (according to our research)
+            # Has no underlying colors we can reach simply (according to our research)
             # Sample the color map with equal strides as many times as how many colors it's built with
             number_of_samples = self.state.cmap.N if self.state.cmap.N is not None else 256
             samples = get_normalized_list_of_equal_strides(number_of_samples)
@@ -458,8 +511,8 @@ class OpenSpaceLayerArtist(LayerArtist):
         vmax = float_to_hex(float(self.state.cmap_vmax))
         return vmin, vmax
 
-    def get_color_map_attrib_data_str(self) -> tuple[str, str]:
-        attrib_data = self.state.layer[self.state.cmap_att]
+    def get_attrib_data_str(self, attribute) -> tuple[str, str]:
+        attrib_data = self.state.layer[attribute]
 
         # Filter away removed indices from list and convert to simp string
         attrib_data = [

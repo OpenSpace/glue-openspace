@@ -12,8 +12,8 @@ from glue.viewers.matplotlib.state import (DeferredDrawCallbackProperty as DDCPr
 # from glue.config import ColormapRegistry as colormaps
 
 COLOR_TYPES = ['Fixed', 'Linear']
-SIZE_TYPES = ['Fixed']
-# SIZE_TYPES = ['Fixed', 'Linear']
+# SIZE_TYPES = ['Fixed']
+SIZE_TYPES = ['Fixed', 'Linear']
 
 __all__ = ['OpenSpaceLayerState']
 
@@ -23,7 +23,7 @@ class OpenSpaceLayerState(LayerState):
     alpha = CallbackProperty()
 
     size = CallbackProperty()
-    size_mode = DDSCProperty(docstring="Which size mode to use", default_index=0)
+    size_mode: Union[Literal['Fixed'], Literal['Linear']] = DDSCProperty(docstring="Which size mode to use", default_index=0)
     size_att = DDSCProperty(docstring="The attribute to use for the size")
     size_vmin = DDCProperty(docstring="The lower level for the size")
     size_vmax = DDCProperty(docstring="The upper level for the size")
