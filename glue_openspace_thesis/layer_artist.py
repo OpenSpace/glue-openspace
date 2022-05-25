@@ -296,7 +296,6 @@ class OpenSpaceLayerArtist(LayerArtist):
 
     def send_initial_data(self):
         self.send_point_data()
-        self.send_fixed_size()
         self.send_opacity()
         self.send_visibility()
 
@@ -516,7 +515,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         # Filter away removed indices from list and convert to simp string
         attrib_data = [
-            float_to_hex(float(x if not np.isnan(x) else 1.0))
+            float_to_hex(float(x)) # if not np.isnan(x) else 1.0
             for i, x in enumerate(attrib_data)
             if i not in self._removed_indices
         ]
