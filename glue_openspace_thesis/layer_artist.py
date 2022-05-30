@@ -48,10 +48,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         from .viewer import OpenSpaceDataViewer
         _viewer: OpenSpaceDataViewer
 
-    will_send_message: bool
-
-    _has_sent_initial_data: bool
-
     _display_name: str
 
     _removed_indices: np.ndarray
@@ -69,11 +65,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         self._display_name = None
         self._state = None
 
-        self.will_send_message = True
-        # self.has_luminosity_data = False
-        # self.has_velocity_data = False
-
-        self._has_sent_initial_data = False
         self.has_updated_points = False
 
     def _on_attribute_change(self, force):
@@ -97,7 +88,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
         
         # If properties update in Glue, send message to OpenSpace with new values
-        if self.will_send_message is False:
+        if self.state.will_send_message is False:
             return
 
         point_data_changed = any(prop in changed for prop in POINT_DATA_PROPERTIES)
@@ -184,31 +175,40 @@ class OpenSpaceLayerArtist(LayerArtist):
             color, offset = simp.read_color(subject, offset)
             color_value = to_hex(color, keep_alpha=False)
 
-            self.will_send_message = False
+            self.state.will_send_message = False
             self.state.color = color_value
 
         # Update Opacity
         elif message_type == simp.SIMPMessageType.Opacity:
             opacity_value, offset = simp.read_float(subject, offset)
 
-            self.will_send_message = False
+            self.state.will_send_message = False
             self.state.alpha = opacity_value
 
         # Update Size
         elif message_type == simp.SIMPMessageType.FixedSize:
             size_value, offset = simp.read_float(subject, offset)
             
-            self.will_send_message = False
+            self.state.will_send_message = False
             self.state.size = size_value
 
         # Toggle Visibility
         elif message_type == simp.SIMPMessageType.Visibility:
             visibility_value, offset = simp.read_string(subject, offset)
-            self.will_send_message = False
+            self.state.will_send_message = False
 
             self.state.visible = visibility_value == "T"
 
-        self.will_send_message = True
+        # Change Colormap
+        elif message_type == simp.SIMPMessageType.ColorMap:
+            v_min, offset = simp.read_float(subject, offset)
+            v_max, offset = simp.read_float(subject, offset)
+
+            self.state.cmap_vmin = v_min
+            self.state.cmap_vmax = v_max
+            # self.state.will_send_message = False
+
+        self.state.will_send_message = True
         self.redraw()
 
     def send_opacity(self):
@@ -313,7 +313,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         else:
             self.send_fixed_size()
 
-        self._has_sent_initial_data = True
+        self.state.has_sent_initial_data = True
 
     # Create and send "Remove Scene Graph Node" message to OS
     def send_remove_sgn(self):
@@ -350,14 +350,19 @@ class OpenSpaceLayerArtist(LayerArtist):
         if self._viewer._socket is None:
             return
 
-        if self._has_sent_initial_data:
+        if self.state.has_sent_initial_data:
             self._on_attribute_change(force)
         else:
             self.send_initial_data()
 
     def get_identifier_str(self) -> Union[str, None]:
-        if isinstance(self.state.layer, Data) or isinstance(self.state.layer, Subset):
+        self.state.has_sent_initial_data = False
+
+        if isinstance(self.state.layer, Data):
+            self._viewer._main_layer_uuid = self.state.layer.uuid
             return self.state.layer.uuid
+        elif isinstance(self.state.layer, Subset):
+            return self._viewer._main_layer_uuid + self.state.layer.label.replace('Subset ', '')
         else:
             return
 

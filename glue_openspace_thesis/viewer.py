@@ -78,6 +78,8 @@ class OpenSpaceDataViewer(DataViewer):
 
     layer_identifiers = []
 
+    _main_layer_uuid: str
+
     class ConnectionState(Enum):
         Disconnected = 0,
         Connected = 1,
@@ -122,6 +124,7 @@ class OpenSpaceDataViewer(DataViewer):
         self._has_resized = False
 
         self._viewer_identifier = str(uuid4())
+        self._main_layer_uuid = ''
 
         # Set up Qt UI
         self.init_ui()
@@ -485,7 +488,7 @@ class OpenSpaceDataViewer(DataViewer):
     @messagebox_on_error("Failed to add subset")
     def add_subset(self, subset) -> bool:
         # TODO: Here we should handle to divide datasets into multiple SGNs in OpenSpace
-        return True # Return true if the subset should be added, false if not
+        return super(OpenSpaceDataViewer, self).add_subset(subset) # Return true if the subset should be added, false if not
 
     def remove_data(self, data):
         [layer.send_remove_sgn() for layer in self.layers if layer.state.layer == data.uuid]

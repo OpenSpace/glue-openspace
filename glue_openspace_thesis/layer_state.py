@@ -18,6 +18,9 @@ SIZE_TYPES = ['Fixed', 'Linear']
 __all__ = ['OpenSpaceLayerState']
 
 class OpenSpaceLayerState(LayerState):
+    has_sent_initial_data: bool
+    will_send_message: bool
+
     layer = CallbackProperty()
     color = CallbackProperty()
     alpha = CallbackProperty()
@@ -37,6 +40,11 @@ class OpenSpaceLayerState(LayerState):
     cmap = DDCProperty(docstring="The colormap to use (when in colormap mode)")
 
     def __init__(self, layer=None, **kwargs):
+        self.has_sent_initial_data = False
+        self.will_send_message = True
+        # self.has_luminosity_data = False
+        # self.has_velocity_data = False
+
         self.limits_cache = {}
 
         self._sync_markersize = None

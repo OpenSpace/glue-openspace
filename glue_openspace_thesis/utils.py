@@ -86,28 +86,37 @@ def filter_lon_lat(_lon: np.ndarray, _lat: np.ndarray, _dist: typing.Optional[np
 
     return lon, lat, dist, removed_indices
 
-def print_attr_of_object_recursive(obj, depth = 2):
-    if depth == 0:
-        return
+def print_attr_of_object_recursive(obj, depth = 2, call_callables = False):
+    initial_depth = depth
 
-    print(f"type = {type(obj)}, obj =")
-    for attrStr in dir(obj):
-        if attrStr.startswith('__') or attrStr.count('byte')\
-        or attrStr.count('string') or attrStr.count('dump'):
-            continue
+    print('\nPrinting Object:\n')
 
-        attribute = getattr(obj, attrStr)
-        print(f'{attrStr} = {attribute}')
+    def recursive_func(obj, depth):
+        if depth == 0:
+            return
 
-        if callable(attribute):
-            try:
-                funcReturn = attribute()
-                print('\t' + f'calling {attrStr} returns:')
-                print_attr_of_object_recursive(funcReturn, depth - 1)
-                continue
-            except:
+        indent = initial_depth - depth
+
+        print(''.join(['\t'] * indent) + f"type = {type(obj)}, obj =")
+        for attrStr in dir(obj):
+            if attrStr.startswith('__') or attrStr.count('byte')\
+            or attrStr.count('string') or attrStr.count('dump'):
                 continue
 
-        if not isinstance(attribute, int) and not isinstance(attribute, float) and not isinstance(attribute, list)\
-        and not isinstance(attribute, str) and not isinstance(attribute, dict) and not isinstance(attribute, set):
-            print_attr_of_object_recursive(attribute, depth - 1)
+            attribute = getattr(obj, attrStr)
+            print(''.join(['\t'] * (indent + 1)) + f'{attrStr} = {attribute}')
+
+            if callable(attribute) and call_callables:
+                try:
+                    funcReturn = attribute()
+                    print('\t' + f'calling {attrStr} returns:')
+                    recursive_func(funcReturn, depth - 1)
+                    continue
+                except:
+                    continue
+
+            if not isinstance(attribute, int) and not isinstance(attribute, float) and not isinstance(attribute, list)\
+            and not isinstance(attribute, str) and not isinstance(attribute, dict) and not isinstance(attribute, set):
+                recursive_func(attribute, depth - 1)
+
+    recursive_func(obj, depth)
