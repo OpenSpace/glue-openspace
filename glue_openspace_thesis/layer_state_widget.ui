@@ -412,21 +412,21 @@
                       </spacer>
                     </item>
                     <!--================================================================-->
-                    <item row="4" column="1" colspan="3" name="nan_value_info">
-                      <widget class="QStackedWidget" name="nan_value_stacked_widget">
+                    <item row="4" column="1" colspan="3" name="cmap_nan_value_info">
+                      <widget class="QStackedWidget" name="cmap_nan_value_stacked_widget">
                         <property name="currentIndex">
                           <number>0</number>
                         </property>
                         <widget class="QWidget" name="cmap_nan_info">
                           <layout class="QGridLayout" name="cmap_nan_info_grid">
                             <item row="0" column="0">
-                              <widget class="QLabel" name="label_nan_hide_info" alignment="Qt::AlignLeft">
+                              <widget class="QLabel" name="label_cmap_nan_info" alignment="Qt::AlignLeft">
                                 <property name="wordWrap">
                                   <bool>true</bool>
                                 </property>
                                 <property name="font">
                                   <font>
-                                    <weight>50</weight>
+                                    <weight>100</weight>
                                   </font>
                                 </property>
                                 <property name="text">
@@ -439,7 +439,10 @@
                         <widget class="QWidget" name="cmap_nan_color">
                           <layout class="QGridLayout" name="cmap_nan_color_grid">
                             <item row="0" column="0">
-                              <widget class="QLabel" name="label_cmap_nan_color">
+                              <widget class="QLabel" name="label_cmap_nan_color" alignment="Qt::AlignLeft">
+                                <property name="wordWrap">
+                                  <bool>true</bool>
+                                </property>
                                 <property name="font">
                                   <font>
                                     <weight>50</weight>
