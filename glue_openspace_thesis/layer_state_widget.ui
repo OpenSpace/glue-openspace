@@ -398,48 +398,70 @@
                         </attribute>
                       </widget>
                     </item>
+                    <item row="3" column="3">
+                      <spacer name="horizontalSpacer">
+                        <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                          <size>
+                            <width>40</width>
+                            <height>20</height>
+                          </size>
+                        </property>
+                      </spacer>
+                    </item>
                     <!--================================================================-->
-                    <item row="4" column="1" colspan="3">
-                      <widget class="QWidget" name="cmap_nan_info">
-                        <layout class="QGridLayout" name="cmap_nan_info_grid">
-                          <item row="0" column="0">
-                            <widget class="QLabel" name="label_nan_hide_info" alignment="Qt::AlignLeft">
-                              <property name="font">
-                                <font>
-                                  <weight>100</weight>
-                                </font>
-                              </property>
-                              <property name="text">
-                                <string>Points with NaN-values
-won't show in OpenSpace</string>
-                              </property>
-                            </widget>
-                          </item>
-                        </layout>
-                      </widget>
-                    </item>                
-                    <!--================================================================-->
-                    <item row="4" column="1" colspan="3">
-                      <widget class="QWidget" name="cmap_nan_color">
-                        <layout class="QGridLayout" name="cmap_nan_color_grid">
-                          <item row="0" column="0">
-                            <widget class="QLabel" name="label_cmap_nan_color">
-                              <property name="text">
-                                <string>NaN color:</string>
-                              </property>
-                            </widget>
-                          </item>
-                          <item row="0" column="1">
-                            <widget class="QColorBox" name="color_cmap_nan_color">
-                              <property name="sizePolicy">
-                                <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-                                  <horstretch>0</horstretch>
-                                  <verstretch>0</verstretch>
-                                </sizepolicy>
-                              </property>
-                            </widget>
-                          </item>
-                        </layout>
+                    <item row="4" column="1" colspan="3" name="nan_value_info">
+                      <widget class="QStackedWidget" name="nan_value_stacked_widget">
+                        <property name="currentIndex">
+                          <number>0</number>
+                        </property>
+                        <widget class="QWidget" name="cmap_nan_info">
+                          <layout class="QGridLayout" name="cmap_nan_info_grid">
+                            <item row="0" column="0">
+                              <widget class="QLabel" name="label_nan_hide_info" alignment="Qt::AlignLeft">
+                                <property name="wordWrap">
+                                  <bool>true</bool>
+                                </property>
+                                <property name="font">
+                                  <font>
+                                    <weight>50</weight>
+                                  </font>
+                                </property>
+                                <property name="text">
+                                  <string>Points with NaN-values won't show in OpenSpace</string>
+                                </property>
+                              </widget>
+                            </item>
+                          </layout>
+                        </widget>
+                        <widget class="QWidget" name="cmap_nan_color">
+                          <layout class="QGridLayout" name="cmap_nan_color_grid">
+                            <item row="0" column="0">
+                              <widget class="QLabel" name="label_cmap_nan_color">
+                                <property name="font">
+                                  <font>
+                                    <weight>50</weight>
+                                  </font>
+                                </property>
+                                <property name="text">
+                                  <string>NaN color:</string>
+                                </property>
+                              </widget>
+                            </item>
+                            <item row="0" column="1">
+                              <widget class="QColorBox" name="color_cmap_nan_color">
+                                <property name="sizePolicy">
+                                  <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                                    <horstretch>0</horstretch>
+                                    <verstretch>0</verstretch>
+                                  </sizepolicy>
+                                </property>
+                              </widget>
+                            </item>
+                          </layout>
+                        </widget>
                       </widget>
                     </item>
                     <!--================================================================-->

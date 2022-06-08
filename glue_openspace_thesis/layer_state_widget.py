@@ -81,9 +81,8 @@ class OpenSpaceLayerStateWidget(QWidget):
     def _update_cmap_nan_mode(self, *args):
         if self._radio_cmap_nan_mode.checkedId() == NaNRadioButtonId.Hide:
             self.state.cmap_nan_mode = 'Hide'
-            self.ui.cmap_nan_color.hide()
-            self.ui.label_nan_hide_info.show()
+            self.ui.nan_value_stacked_widget.setCurrentIndex(0)
+            
         elif self._radio_cmap_nan_mode.checkedId() == NaNRadioButtonId.Color:
             self.state.cmap_nan_mode = 'Color'
-            self.ui.cmap_nan_color.show()
-            self.ui.label_nan_hide_info.hide()
+            self.ui.nan_value_stacked_widget.setCurrentIndex(1)
