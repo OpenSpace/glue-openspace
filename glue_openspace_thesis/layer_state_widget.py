@@ -1,13 +1,19 @@
 from __future__ import absolute_import, division, print_function
+from enum import Enum
 
 import os
 
-from qtpy.QtWidgets import QWidget
+from qtpy.QtWidgets import QWidget, QButtonGroup
 
 from echo.qt import autoconnect_callbacks_to_qt
 from glue.utils.qt import load_ui, fix_tab_widget_fontsize
 
 __all__ = ['OpenSpaceLayerStateWidget']
+
+
+class NaNRadioButtonId(int, Enum):
+    Hide = 1
+    Color = 2
 
 class OpenSpaceLayerStateWidget(QWidget):
 
@@ -37,6 +43,9 @@ class OpenSpaceLayerStateWidget(QWidget):
 
         # self.ui.button_center.setVisible(False) # Never used
 
+        # Set up cmap NaN value option radio buttons
+        self._init_cmap_nan_modes()
+
     def _update_size_mode(self, *args):
         # self.state.size = 10
 
@@ -56,3 +65,25 @@ class OpenSpaceLayerStateWidget(QWidget):
         elif self.state.color_mode == 'Linear':
             self.ui.cmap_attributes.show()
             self.ui.color_color.hide()
+
+    def _init_cmap_nan_modes(self, *args):
+        self._radio_cmap_nan_mode = QButtonGroup()
+        self._radio_cmap_nan_mode.addButton(self.ui.radio_cmap_nan_hide, id=NaNRadioButtonId.Hide)
+        self._radio_cmap_nan_mode.addButton(self.ui.radio_cmap_nan_color, id=NaNRadioButtonId.Color)
+
+        self.ui.radio_cmap_nan_color.toggled.connect(self._update_cmap_nan_mode)
+        self.ui.radio_cmap_nan_color.toggled.connect(self._update_cmap_nan_mode)
+
+        # Set Hide button checked initially 
+        self.ui.radio_cmap_nan_hide.setChecked(True)
+        self._update_cmap_nan_mode()
+
+    def _update_cmap_nan_mode(self, *args):
+        if self._radio_cmap_nan_mode.checkedId() == NaNRadioButtonId.Hide:
+            self.state.cmap_nan_mode = 'Hide'
+            self.ui.cmap_nan_color.hide()
+            self.ui.label_nan_hide_info.show()
+        elif self._radio_cmap_nan_mode.checkedId() == NaNRadioButtonId.Color:
+            self.state.cmap_nan_mode = 'Color'
+            self.ui.cmap_nan_color.show()
+            self.ui.label_nan_hide_info.hide()

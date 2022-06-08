@@ -31,7 +31,7 @@ POINT_DATA_PROPERTIES = set([
 ])
 
 FIXED_COLOR_PROPERTIES = set(['color_mode', 'color'])
-CMAP_PROPERTIES = set(['color_mode', 'cmap_vmin', 'cmap_vmax', 'cmap'])
+CMAP_PROPERTIES = set(['color_mode', 'cmap_vmin', 'cmap_vmax', 'cmap', 'cmap_nan_mode', 'cmap_nan_color'])
 CMAP_ATTR_PROPERTIES = set(['color_mode', 'cmap_att'])
 
 FIXED_SIZE_PROPERTIES = set(['size_mode', 'size'])
@@ -222,11 +222,19 @@ class OpenSpaceLayerArtist(LayerArtist):
     def send_color_map(self):
         vmin_str, vmax_str = self.get_color_map_limits_str()
         color_map_str, n_colors_str = self.get_color_map_str()
+        cmap_nan_color = list(
+            to_rgb(self.state.cmap_nan_color 
+                    if (self.state.cmap_nan_color != None) 
+                    else [0.0,1.0,0.0,1.0])
+        )
+        cmap_nan_color_str = self.get_color_str(cmap_nan_color) + simp.SEP if self.state.cmap_nan_mode == 'Color' else ''
 
         subject = (
             self.get_subject_prefix() +
             vmin_str + simp.SEP +
             vmax_str + simp.SEP +
+            self.state.cmap_nan_mode + simp.SEP +
+            cmap_nan_color_str + 
             n_colors_str + simp.SEP +
             color_map_str + simp.SEP
         )
