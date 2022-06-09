@@ -101,7 +101,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         has_changed_linear_size = any(prop in changed for prop in SIZE_PROPERTIES) and self.state.size_mode == 'Linear'
         has_changed_linear_size_att = any(prop in changed for prop in SIZE_ATTR_PROPERTIES) and self.state.size_mode == 'Linear'
 
-        print(f'has_changed_linear_size_att={has_changed_linear_size_att}')
 
         if 'alpha' in changed:
             self.send_opacity()
@@ -323,6 +322,10 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         self.state.has_sent_initial_data = True
 
+        # Clear properties that have been set on init or 
+        # duplicate messages will be sent on next prop change 
+        self.pop_changed_properties()
+
     # Create and send "Remove Scene Graph Node" message to OS
     def send_remove_sgn(self):
         message_type = simp.SIMPMessageType.RemoveSceneGraphNode
@@ -364,7 +367,13 @@ class OpenSpaceLayerArtist(LayerArtist):
             self.send_initial_data()
 
     def get_identifier_str(self) -> Union[str, None]:
-        self.state.has_sent_initial_data = False
+        # TODO: Dilemma!
+        # Problem: This line makes send_inital_data 
+        # be called on every prop change
+        # Good thing: This make Subset data automatically being 
+        # sent to OpenSpace on Subset creation
+        # Can we set a 'has_sent_initial_data' to every dataset/subset?
+        # self.state.has_sent_initial_data = False
 
         if isinstance(self.state.layer, Data):
             self._viewer._main_layer_uuid = self.state.layer.uuid
