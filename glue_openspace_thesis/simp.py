@@ -20,6 +20,7 @@ class Simp:
         Connection = 'CONN'
         Disconnection = 'DISC'
         PointData = 'PDAT'
+        VelocityData = 'VDAT'
         RemoveSceneGraphNode = 'RSGN'
         Color = 'FCOL'
         ColorMap = 'LCOL'
@@ -41,12 +42,13 @@ class Simp:
         length_of_subject = str(format(len(subject), '015d')) # formats to a 15 character string
         message = simp.protocol_version + message_type + length_of_subject + subject
 
-        subject_print_str = ', Subject[0:' + (length_of_subject if len(subject) < 40 else "40")
-        subject_print_str += ']: ' + (subject if len(subject) < 40 else (subject[:40] + "..."))
-        print_str = 'Protocol version: ' + simp.protocol_version\
-                    + ', Message type: ' + message_type\
-                    + subject_print_str
-        viewer.log(f'Sending SIMP message: ({print_str})')
+        # subject_print_str = ', Subject[0:' + (length_of_subject if len(subject) < 40 else "40")
+        # subject_print_str += ']: ' + (subject if len(subject) < 40 else (subject[:40] + "..."))
+        # print_str = 'Protocol version: ' + simp.protocol_version\
+        #             + ', Message type: ' + message_type\
+        #             + subject_print_str
+        # viewer.log(f'Sending SIMP message: ({print_str})')
+        simp.print_simp_message(viewer, message_type, subject, length_of_subject)
         
         send_retries = 0
         message_sent = False
@@ -161,5 +163,14 @@ class Simp:
         offset += 1
 
         return value, offset
+
+    @staticmethod
+    def print_simp_message(viewer: OpenSpaceDataViewer, message_type: SIMPMessageType, subject='', length_of_subject=-1):
+        subject_print_str = ', Subject[0:' + (length_of_subject if len(subject) < 40 else "40")
+        subject_print_str += ']: ' + (subject if len(subject) < 40 else (subject[:40] + "..."))
+        print_str = 'Protocol version: ' + simp.protocol_version\
+                    + ', Message type: ' + message_type\
+                    + subject_print_str
+        viewer.log(f'Sending SIMP message: ({print_str})')
 
 simp = Simp()

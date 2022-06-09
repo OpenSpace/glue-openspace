@@ -30,6 +30,16 @@ POINT_DATA_PROPERTIES = set([
     "alt_unit"
 ])
 
+VELOCITY_DATA_PROPERTIES = set([
+    "velocity_mode",
+    "u_att",
+    "v_att",
+    "w_att",
+    "vel_unit_att",
+    "vel_norm",
+    "speed_att"
+])
+
 FIXED_COLOR_PROPERTIES = set(['color_mode', 'color'])
 CMAP_PROPERTIES = set(['color_mode', 'cmap_vmin', 'cmap_vmax', 'cmap', 'cmap_nan_mode', 'cmap_nan_color'])
 CMAP_ATTR_PROPERTIES = set(['color_mode', 'cmap_att'])
@@ -92,6 +102,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         point_data_changed = any(prop in changed for prop in POINT_DATA_PROPERTIES)
+        velocity_data_changed = any(prop in changed for prop in VELOCITY_DATA_PROPERTIES) and self._viewer_state.velocity_mode == 'Motion'
 
         has_changed_fixed_color = any(prop in changed for prop in FIXED_COLOR_PROPERTIES) and self.state.color_mode == 'Fixed'
         has_changed_color_map = any(prop in changed for prop in CMAP_PROPERTIES) and self.state.color_mode == 'Linear'
@@ -101,7 +112,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         has_changed_linear_size = any(prop in changed for prop in SIZE_PROPERTIES) and self.state.size_mode == 'Linear'
         has_changed_linear_size_att = any(prop in changed for prop in SIZE_ATTR_PROPERTIES) and self.state.size_mode == 'Linear'
 
-        print(f'has_changed_linear_size_att={has_changed_linear_size_att}')
 
         if 'alpha' in changed:
             self.send_opacity()
@@ -133,6 +143,14 @@ class OpenSpaceLayerArtist(LayerArtist):
             if self.has_updated_points:
                 self.send_color_map_attrib_data()
                 self.has_updated_points = False
+
+        if velocity_data_changed:
+            # TODO: Change to combosel to change mode between Static/Motion mode ???  
+            # if self.state.layer[self._viewer_state.speed_att]
+            # self._viewer.log(f'self._viewer_state.send_velocity = {self._viewer_state.send_velocity}')
+            # if self._viewer_state.send_velocity:
+            self.send_velocity_data()
+        
 
         # # On reselect of subset data, remove old scene graph node and resend data
         # if isinstance(self.state.layer, Subset):
@@ -297,6 +315,24 @@ class OpenSpaceLayerArtist(LayerArtist):
         except Exception as exc:
             self._viewer.log(f'Exception in send_point_data: {str(exc)}')
 
+    def send_velocity_data(self):
+        # Create string with coordinates for velocity data
+        try:
+            velocity_data_str, n_points_str = self.get_velocity_str()
+            self._viewer.log(f'Sending velocity data for {n_points_str} points to OpenSpace')
+            subject = (
+                self.get_subject_prefix() +
+                n_points_str + simp.SEP +
+                str(3) + simp.SEP +
+                velocity_data_str + simp.SEP
+            )
+            # length_of_subject = str(format(len(subject), '015d')) # formats to a 15 character string
+            # simp.print_simp_message(self._viewer, simp.SIMPMessageType.VelocityData, subject, length_of_subject)
+            simp.send_simp_message(self._viewer, simp.SIMPMessageType.VelocityData, subject)
+
+        except Exception as exc:
+            self._viewer.log(f'Exception in send_velocity_data: {str(exc)}')
+
     def get_subject_prefix(self) -> str:
         identifier = self.get_identifier_str()
         gui_name = self.get_gui_name_str()
@@ -322,6 +358,9 @@ class OpenSpaceLayerArtist(LayerArtist):
             self.send_fixed_size()
 
         self.state.has_sent_initial_data = True
+        self.pop_changed_properties()
+
+        
 
     # Create and send "Remove Scene Graph Node" message to OS
     def send_remove_sgn(self):
@@ -364,7 +403,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             self.send_initial_data()
 
     def get_identifier_str(self) -> Union[str, None]:
-        self.state.has_sent_initial_data = False
+        # self.state.has_sent_initial_data = False
 
         if isinstance(self.state.layer, Data):
             self._viewer._main_layer_uuid = self.state.layer.uuid
@@ -500,6 +539,63 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         return coordinates_string, n_points_str
     
+    def get_velocity_str(self) -> tuple[str, str]:
+        # self.has_updated_points = True
+        # u, v, w, self._removed_indices = filter_cartesian(
+        #     self.state.layer[self._viewer_state.u_att],
+        #     self.state.layer[self._viewer_state.v_att],
+        #     self.state.layer[self._viewer_state.w_att]
+        # )
+        
+        u_att = self.state.layer[self._viewer_state.u_att]
+        v_att = self.state.layer[self._viewer_state.v_att]
+        w_att = self.state.layer[self._viewer_state.w_att]
+
+        # Fail safe! u, v, w should all be the same length
+        min_len_uvw = min(len(u_att), len(v_att), len(w_att))
+        max_len_uvw = max(len(u_att), len(v_att), len(w_att))
+        u, v, w = [], [], []
+        for i in range(0, max_len_uvw):
+            if i in self._removed_indices:
+                continue
+            if i > min_len_uvw:
+                break
+            u.append(u_att[i])
+            v.append(v_att[i])
+            w.append(w_att[i])
+        u, v, w = np.array(u), np.array(v), np.array(w)
+        
+        if  not self._viewer_state.vel_norm \
+            and self._viewer_state.speed_att is not None:
+            norm_factor = self.state.layer[self._viewer_state.speed_att]
+            norm_factor = [
+                x for i, x in enumerate(norm_factor) if i not in self._removed_indices
+            ]
+            u = u * norm_factor
+            v = v * norm_factor
+            w = w * norm_factor
+
+        if self._viewer_state.vel_unit_att is not None and self._viewer_state.vel_unit_att != 'pc':
+            # Get the unit from the GUI
+            unit = units.Unit(self._viewer_state.vel_unit_att)
+            
+            # Convert to parsec, since that's what OpenSpace wants
+            # TODO: Doesn't it want meter?
+            u = (u * unit).to_value(units.pc)
+            v = (v * unit).to_value(units.pc)
+            w = (w * unit).to_value(units.pc)
+
+        velocity_string = ''
+        n_points_str = str(len(u))
+
+        for i in range(len(u)):
+            velocity_string += "["\
+                + float_to_hex(float(u[i])) + simp.SEP\
+                + float_to_hex(float(v[i])) + simp.SEP\
+                + float_to_hex(float(w[i])) + simp.SEP + "]"
+
+        return velocity_string, n_points_str
+
     def get_color_map_str(self) -> tuple[str, str]:
         formatted_color_map = None
         if hasattr(self.state.cmap, 'colors'):

@@ -280,11 +280,12 @@
               <!--================================================================-->
             </layout>
           </widget>
+          <!--================================================================-->
           <widget class="QWidget" name="velocity_tab">
             <attribute name="title">
               <string>Velocity</string>
             </attribute>
-            <layout class="QGridLayout" name="data_points_grid">
+            <layout class="QGridLayout" name="velocity_grid">
               <property name="leftMargin">
                 <number>4</number>
               </property>
@@ -300,6 +301,193 @@
               <property name="verticalSpacing">
                 <number>5</number>
               </property>
+
+              <!--================================================================-->
+              <item row="0" column="0" alignment="Qt::AlignRight">
+                <widget class="QLabel" name="label_velocity_mode">
+                  <property name="text">
+                    <string>Velocity mode:</string>
+                  </property>
+                </widget>
+              </item>
+              <item row="0" column="1">
+                <widget class="QComboBox" name="combosel_velocity_mode">
+                  <property name="sizeAdjustPolicy">
+                    <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                  </property>
+                </widget>
+              </item>
+              <!--================================================================-->
+              <item row="1" column="0" colspan="2" name="velocity">
+                <widget class="QStackedWidget" name="velocity_stacked_widget">
+                  <property name="currentIndex">
+                    <number>0</number>
+                  </property>
+                  <!--================================================================-->
+                  <!--================================================================-->
+                  <widget class="QWidget" name="velocity_static">
+                    <layout class="QGridLayout" name="velocity_static_grid">
+                      <property name="leftMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="verticalSpacing">
+                        <number>5</number>
+                      </property>
+                      <!--================================================================-->
+                      <item row="0" column="0" alignment="Qt::AlignCenter">
+                        <widget class="QLabel" name="label_velocity_static">
+                          <property name="text">
+                            <string>No velocity data will be sent to OpenSpace in Static mode</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                    </layout>
+                  </widget>
+                  <!--================================================================-->
+                  <!--================================================================-->
+                  <widget class="QWidget" name="velocity_motion">
+                    <layout class="QGridLayout" name="velocity_motion_grid">
+                      <property name="leftMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                        <number>0</number>
+                      </property>
+                      <property name="verticalSpacing">
+                        <number>5</number>
+                      </property>
+                      <!--================================================================-->
+                      <!-- <item row="0" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_send_velocity">
+                          <property name="text">
+                            <string>Send velocity data to OpenSpace:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="0" column="1">
+                        <widget class="QCheckBox" name="bool_send_velocity">
+                        </widget>
+                      </item> -->
+                      <!--================================================================-->
+                      <!--================================================================-->
+                      <item row="0" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_u_att">
+                          <property name="text">
+                            <string>u:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="0" column="1">
+                        <widget class="QComboBox" name="combosel_u_att">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                      <!--================================================================-->
+                      <item row="1" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_v_att">
+                          <property name="text">
+                            <string>v:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="1" column="1">
+                        <widget class="QComboBox" name="combosel_v_att">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                      <!--================================================================-->
+                      <item row="2" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_w_att">
+                          <property name="text">
+                            <string>w:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="2" column="1">
+                        <widget class="QComboBox" name="combosel_w_att">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                      <!--================================================================-->
+                      <item row="3" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_vel_unit_att">
+                          <property name="text">
+                            <string>Unit:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="3" column="1">
+                        <widget class="QComboBox" name="combosel_vel_unit_att">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                      <!--================================================================-->
+                      <item row="4" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_velocity_normalized">
+                          <property name="text">
+                            <string>Velocity is normalized:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="4" column="1">
+                        <widget class="QCheckBox" name="bool_vel_norm">
+                        <property name="text">
+                            <string>(Speed needed if norm)</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                      <!--================================================================-->
+                      <item row="5" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_speed_att">
+                          <property name="text">
+                            <string>Speed:</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="5" column="1">
+                        <widget class="QComboBox" name="combosel_speed_att">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                    </layout>
+                  </widget>
+                  <!--================================================================-->
+                </widget>
+              </item>
+              <!--================================================================-->
+
             </layout>
           </widget>
         </widget>
