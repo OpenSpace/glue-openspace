@@ -60,7 +60,6 @@ class OpenSpaceDataViewer(DataViewer):
     _is_connected: bool
     _is_connecting: bool
     _lost_connection: bool
-    _has_been_connected: bool
 
     _failed_socket_read_retries: int
     
@@ -115,7 +114,6 @@ class OpenSpaceDataViewer(DataViewer):
         self._thread_running = False
         self._threadCommsRx = None
 
-        self._has_been_connected = False
         self._is_connected = False
         self._is_connecting = False
         self._lost_connection = False
@@ -241,7 +239,6 @@ class OpenSpaceDataViewer(DataViewer):
             self.connection_button.setText('Disconnect')
             self.connection_button.setEnabled(True)
             self._is_connected = True
-            self._has_been_connected = True
             self._is_connecting = False
         
         elif new_state == self.ConnectionState.Disconnected:
@@ -445,14 +442,11 @@ class OpenSpaceDataViewer(DataViewer):
 
     @messagebox_on_error('An error occurred when trying to disconnect from OpenSpace:', sep=' ')
     def disconnect_from_openspace(self):
-        self.stop_socket_thread()
+        if self._socket is None:
+            return
 
-        if self._has_been_connected:
-            try:
-                # Send "DISC" message to OpenSpace
-                simp.send_simp_message(self, simp.SIMPMessageType.Disconnection)
-            except:
-                self.log("Didn't send disconnection message to OpenSpace")
+        self.debug(f'Executing disconnect_from_openspace()')
+        self.stop_socket_thread()
 
         try:
             self._socket.shutdown(socket.SHUT_RDWR)
@@ -462,8 +456,8 @@ class OpenSpaceDataViewer(DataViewer):
         finally:
             self._socket = None
 
-        # Reset _has_sent_initial_data so that layers send all data on next connection
-        [setattr(layer, '_has_sent_initial_data', False) for layer in self.layers]
+        # Reset has_sent_initial_data so that layers send all data on next connection
+        [setattr(self.layers[i].state, 'has_sent_initial_data', False) for i in range(len(self.layers))]
 
         self._lost_connection = False
         
