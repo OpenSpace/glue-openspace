@@ -32,6 +32,8 @@ from .layer_state_widget import OpenSpaceLayerStateWidget
 
 __all__ = ['OpenSpaceDataViewer']
 
+DEBUG = False # TODO: Always set this to False before committing!
+
 # TODO move this to later
 # TODO make this image selectable by user
 TEXTURE_ORIGIN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
@@ -232,6 +234,8 @@ class OpenSpaceDataViewer(DataViewer):
     #     self.resize_window()
 
     def set_connection_state(self, new_state: ConnectionState):
+        self.debug(f'Executing set_connection_state()')
+        
         # Set button enabled/disabled and button text
         if new_state == self.ConnectionState.Connected:
             self.connection_button.setText('Disconnect')
@@ -263,6 +267,11 @@ class OpenSpaceDataViewer(DataViewer):
         # new_msg.setAlignment(Qt.AlignLeft)
         # self.log_widget.addWidget(new_msg)
         return
+
+    def debug(self, msg: str):
+        if (DEBUG is False): 
+            return
+        self.log('(DEBUG) ' + msg)
 
     def resize_window(self):
         qApp.processEvents()
@@ -315,6 +324,7 @@ class OpenSpaceDataViewer(DataViewer):
                 self.receive_message()
 
         except simp.DisconnectionException:
+            self.debug(f'request_listen(): simp.DisconnectionException')
             pass
 
         except Exception as exc:
@@ -339,6 +349,7 @@ class OpenSpaceDataViewer(DataViewer):
 
     # Connection handshake to ensure connection is established
     def receive_handshake(self):
+        self.debug(f'Executing receive_handshake()')
         message_received = self.read_socket()
 
         message_type, _ = simp.parse_message(self, message_received)
@@ -354,6 +365,7 @@ class OpenSpaceDataViewer(DataViewer):
             layer.update(force=True)
 
     def receive_message(self):
+        self.debug(f'Executing receive_message()')
         message_received = self.read_socket()
 
         message_type, subject = simp.parse_message(self, message_received)
@@ -377,6 +389,7 @@ class OpenSpaceDataViewer(DataViewer):
 
     @messagebox_on_error('An error occurred when trying to reset socket:', sep=' ')
     def reset_socket(self):
+        self.debug(f'Executing reset_socket()')
         try:
             ip = self.ip_textfield.text().lower()
             if len(ip) < 8:
