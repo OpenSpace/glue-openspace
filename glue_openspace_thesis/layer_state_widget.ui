@@ -367,7 +367,7 @@
                     </item>
                     <!--================================================================-->
                     <item row="3" column="0">
-                      <widget class="QLabel" name="label_nan_mode" alignment="Qt::AlignRight|Qt::AlignVCenter">
+                      <widget class="QLabel" name="label_cmap_nan_mode" alignment="Qt::AlignRight|Qt::AlignVCenter">
                         <property name="font">
                           <font>
                             <weight>50</weight>
@@ -431,6 +431,12 @@
                                 </property>
                                 <property name="text">
                                   <string>Points with NaN-values won't show in OpenSpace</string>
+                                </property>
+                                <property name="sizePolicy">
+                                  <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                                    <horstretch>0</horstretch>
+                                    <verstretch>0</verstretch>
+                                  </sizepolicy>
                                 </property>
                               </widget>
                             </item>

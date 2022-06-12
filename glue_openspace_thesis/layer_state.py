@@ -59,8 +59,13 @@ class OpenSpaceLayerState(LayerState):
 
         self.color = self.layer.style.color
         self.alpha = self.layer.style.alpha
-
         self.size = self.layer.style.markersize
+        self.cmap = colormaps.members[0][1] # Set to first colormap
+
+        OpenSpaceLayerState.color_mode.set_choices(self, COLOR_TYPES)
+        OpenSpaceLayerState.size_mode.set_choices(self, SIZE_TYPES)
+        OpenSpaceLayerState.cmap_nan_mode.set_choices(self, CMAP_NAN_MODES)
+
         self.size_att_helper = ComponentIDComboHelper(self, 'size_att',
                                                      numeric=True,
                                                      categorical=False,
@@ -81,16 +86,9 @@ class OpenSpaceLayerState(LayerState):
                                                           upper='cmap_vmax',
                                                           limits_cache=self.limits_cache)
 
-        OpenSpaceLayerState.color_mode.set_choices(self, COLOR_TYPES)
-        OpenSpaceLayerState.size_mode.set_choices(self, SIZE_TYPES)
-        OpenSpaceLayerState.cmap_nan_mode.set_choices(self, CMAP_NAN_MODES)
-
-        
         self.add_callback('layer', self._on_layer_change)
         if layer is not None:
             self._on_layer_change()
-
-        self.cmap = colormaps.members[0][1] # Set to first colormap
 
         self.update_from_dict(kwargs)
 

@@ -1,18 +1,21 @@
 from __future__ import absolute_import, division, print_function
+from typing import Literal, Union
 
 from astropy import units as u
 
 from glue.core.data_combo_helper import ComponentIDComboHelper
 from echo import (ListCallbackProperty, SelectionCallbackProperty, CallbackProperty)
 from glue.viewers.common.state import ViewerState
+from glue.viewers.matplotlib.state import (DeferredDrawSelectionCallbackProperty as DDSCProperty)
 
-ALTERNATIVE_UNITS = [u.m, u.km, u.AU, u.lyr, u.pc, u.kpc, u.Mpc]
+ALTERNATIVE_LENGTH_UNITS = [u.m, u.km, u.AU, u.lyr, u.pc, u.kpc, u.Mpc]
+ALTERNATIVE_TIME_UNITS = [u.s, u.h]
+# ALTERNATIVE_VELOCITY_UNITS = [u.m/u.s, u.km/u.s, u.AU/u.s, u.lyr/u.s, u.pc/u.s, u.kpc/u.s, u.Mpc/u.s]
 
-ALTERNATIVE_TYPES = ['Distance']
-
+# ALTERNATIVE_TYPES = ['Distance']
 COORDINATE_SYSTEMS = ['Cartesian', 'ICRS', 'FK5', 'FK4', 'Galactic']
-
 VELOCITY_MODES = ['Static', 'Motion']
+VELOCITY_NAN_MODES = ['Hide', 'AsIs']
 
 __all__ = ['OpenSpaceViewerState']
 
@@ -27,16 +30,17 @@ class OpenSpaceViewerState(ViewerState):
     cartesian_unit_att = SelectionCallbackProperty(default_index=4, docstring='The unit of the current dataset')
 
     # Velocity
-    # velocity_system = SelectionCallbackProperty(default_index=0)
     velocity_mode = SelectionCallbackProperty(default_index=0)
-    # color_mode: Union[Literal['Fixed'], Literal['Linear']] = DDSCProperty(docstring="Which color mode to use", default_index=0)
-    # send_velocity = CallbackProperty(docstring='Whether to send velocity to OpenSpace') #, docstring='Whether or not velocity is normalized'
+    # velocity_system = SelectionCallbackProperty(default_index=0) # TODO: This might be needed?
+    
     u_att = SelectionCallbackProperty(default_index=0, docstring='The attribute to use for u')
     v_att = SelectionCallbackProperty(default_index=1, docstring='The attribute to use for v')
     w_att = SelectionCallbackProperty(default_index=2, docstring='The attribute to use for w')
-    vel_unit_att = SelectionCallbackProperty(default_index=4, docstring='The velocity unit of the current dataset')
+    vel_length_unit_att = SelectionCallbackProperty(default_index=4, docstring='The velocity unit of the current dataset')
+    # vel_time_unit_att = SelectionCallbackProperty(default_index=0, docstring='The velocity unit of the current dataset')
     vel_norm = CallbackProperty(docstring='Whether velocity is normalized') #, docstring='Whether or not velocity is normalized'
     speed_att = SelectionCallbackProperty(default_index=3, docstring='The attribute to use for speed')
+    vel_nan_mode: Union[Literal['Hide'], Literal['Color']] = DDSCProperty(docstring="Which velocity NaN value mode to use", default_index=0)
 
     lon_att = SelectionCallbackProperty(docstring='The attribute to use for ra/longitude')
     lat_att = SelectionCallbackProperty(docstring='The attribute to use for dec/latitude')
@@ -52,10 +56,12 @@ class OpenSpaceViewerState(ViewerState):
         super(OpenSpaceViewerState, self).__init__()
 
         OpenSpaceViewerState.coordinate_system.set_choices(self, COORDINATE_SYSTEMS)
+        OpenSpaceViewerState.alt_unit.set_choices(self, [str(x) for x in ALTERNATIVE_LENGTH_UNITS])
+        OpenSpaceViewerState.cartesian_unit_att.set_choices(self, [str(x) for x in ALTERNATIVE_LENGTH_UNITS])
         OpenSpaceViewerState.velocity_mode.set_choices(self, VELOCITY_MODES)
-        OpenSpaceViewerState.alt_unit.set_choices(self, [str(x) for x in ALTERNATIVE_UNITS])
-        OpenSpaceViewerState.cartesian_unit_att.set_choices(self, [str(x) for x in ALTERNATIVE_UNITS])
-        OpenSpaceViewerState.vel_unit_att.set_choices(self, [str(x) for x in ALTERNATIVE_UNITS])
+        OpenSpaceViewerState.vel_length_unit_att.set_choices(self, [str(x) for x in ALTERNATIVE_LENGTH_UNITS])
+        # OpenSpaceViewerState.vel_time_unit_att.set_choices(self, [str(x) for x in ALTERNATIVE_TIME_UNITS])
+        OpenSpaceViewerState.vel_nan_mode.set_choices(self, VELOCITY_NAN_MODES)
         # OpenSpaceViewerState.alt_type.set_choices(self, ALTERNATIVE_TYPES)
 
         self.x_att_helper = ComponentIDComboHelper(self, 'x_att',
