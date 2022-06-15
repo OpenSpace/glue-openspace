@@ -439,7 +439,7 @@
                         </widget>
                       </item>
                       <item row="3" column="1">
-                        <widget class="QComboBox" name="combosel_vel_length_unit_att">
+                        <widget class="QComboBox" name="combosel_vel_distance_unit_att">
                           <property name="sizeAdjustPolicy">
                             <enum>QComboBox::AdjustToMinimumContentsLength</enum>
                           </property>
@@ -465,7 +465,7 @@
                               <number>5</number>
                             </property>
                             <item row="0" column="0" alignment="Qt::AlignHCenter">
-                              <widget class="QComboBox" name="combosel_vel_length_unit_att">
+                              <widget class="QComboBox" name="combosel_vel_distance_unit_att">
                                 <property name="sizePolicy">
                                   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                                     <horstretch>0</horstretch>
@@ -495,7 +495,8 @@
                         </widget>
                       </item> -->
                       <!--================================================================-->
-                      <item row="4" column="0" alignment="Qt::AlignRight">
+                      <!--===================== This might be added ======================-->
+                      <!-- <item row="4" column="0" alignment="Qt::AlignRight">
                         <widget class="QLabel" name="label_velocity_normalized">
                           <property name="text">
                             <string>Velocity is normalized:</string>
@@ -508,9 +509,9 @@
                             <string>(Speed needed if norm)</string>
                           </property>
                         </widget>
-                      </item>
+                      </item> -->
                       <!--================================================================-->
-                      <item row="5" column="0" alignment="Qt::AlignRight">
+                      <!-- <item row="5" column="0" alignment="Qt::AlignRight">
                         <widget class="QLabel" name="label_speed_att">
                           <property name="text">
                             <string>Speed:</string>
@@ -523,7 +524,7 @@
                             <enum>QComboBox::AdjustToMinimumContentsLength</enum>
                           </property>
                         </widget>
-                      </item>
+                      </item> -->
                       <!--================================================================-->
                       <item row="6" column="0" alignment="Qt::AlignRight">
                         <widget class="QLabel" name="label_vel_nan_mode">

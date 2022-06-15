@@ -32,7 +32,7 @@ from .layer_state_widget import OpenSpaceLayerStateWidget
 
 __all__ = ['OpenSpaceDataViewer']
 
-DEBUG = False # TODO: Always set this to False before committing!
+DEBUG = True # TODO: Always set this to False before committing!
 
 # TODO move this to later
 # TODO make this image selectable by user

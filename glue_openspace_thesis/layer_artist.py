@@ -35,10 +35,9 @@ VELOCITY_DATA_PROPERTIES = set([
     "u_att",
     "v_att",
     "w_att",
-    "vel_length_unit_att",
-    # "vel_time_unit_att",
-    "vel_norm",
-    "speed_att",
+    "vel_distance_unit_att",
+    # "vel_norm",
+    # "speed_att",
     # TODO: These NaN props 
     # probably need a message
     # of their own. We don't 
@@ -153,10 +152,6 @@ class OpenSpaceLayerArtist(LayerArtist):
                 self.has_updated_points = False
 
         if velocity_data_changed:
-            # TODO: Change to combosel to change mode between Static/Motion mode ???  
-            # if self.state.layer[self._viewer_state.speed_att]
-            # self._viewer.log(f'self._viewer_state.send_velocity = {self._viewer_state.send_velocity}')
-            # if self._viewer_state.send_velocity:
             self.send_velocity_data()
         
 
@@ -253,7 +248,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                     if (self.state.cmap_nan_color != None) 
                     else [0.0,1.0,0.0,1.0])
         )
-        cmap_nan_color_str = self.get_color_str(cmap_nan_color) + simp.SEP if self.state.cmap_nan_mode == 'Color' else ''
+        cmap_nan_color_str = self.get_color_str(cmap_nan_color) + simp.SEP if self.state.cmap_nan_mode == 'FixedColor' else ''
 
         subject = (
             self.get_subject_prefix() +
@@ -421,6 +416,11 @@ class OpenSpaceLayerArtist(LayerArtist):
         # self.state.has_sent_initial_data = False
 
         if isinstance(self.state.layer, Data):
+            # TODO: Same dataset can be connected to multiple viewers and
+            # can be controlled from each. This is a bit unclear. Two options:
+            # 1. A dataset can be used in multiple viewers but are treated as different datasets
+            # 2. A dataset can onlu be used in one viewer at a time. Give a prompt that says 
+            #    that you can't have multiple viewers for same dataset, if user tries.
             self._viewer._main_layer_uuid = self.state.layer.uuid
             return self.state.layer.uuid
         elif isinstance(self.state.layer, Subset):
@@ -500,7 +500,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             
         else:
             frame = self._viewer_state.coordinate_system.lower()
-            unit = units.Unit(self._viewer_state.alt_unit)
+            unit = units.Unit(self._viewer_state.alt_unit) # TODO: Rename to dist_unit? 
 
             if self._viewer_state.alt_att is None or unit is None:
                 self.has_updated_points = True
@@ -554,7 +554,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         return coordinates_string, n_points_str
     
-    def get_velocity_str(self) -> tuple[str, str, str]:        
+    def get_velocity_str(self) -> tuple[str, str, str]:
         u_att = self.state.layer[self._viewer_state.u_att]
         v_att = self.state.layer[self._viewer_state.v_att]
         w_att = self.state.layer[self._viewer_state.w_att]
@@ -572,36 +572,22 @@ class OpenSpaceLayerArtist(LayerArtist):
             v.append(v_att[i])
             w.append(w_att[i])
         u, v, w = np.array(u), np.array(v), np.array(w)
-        
-        # TODO: Fix, since this is probably wrong!
-        if  not self._viewer_state.vel_norm \
-            and self._viewer_state.speed_att is not None:
-            norm_factor = self.state.layer[self._viewer_state.speed_att]
-            norm_factor = [
-                x for i, x in enumerate(norm_factor) if i not in self._removed_indices
-            ]
-            u = u * norm_factor
-            v = v * norm_factor
-            w = w * norm_factor
 
-        # # TODO: Change this to always convert to m/s
-        # if self._viewer_state.vel_length_unit_att is not None \
-        # and self._viewer_state.vel_length_unit_att != 'm':
-        #     # Get the unit from the GUI
-        #     unit = units.Unit(self._viewer_state.vel_length_unit_att)
-        #     # length_unit = units.Unit(self._viewer_state.vel_length_unit_att)
-        #     # time_unit = units.Unit(self._viewer_state.vel_time_unit_att)
-            
-        #     # Convert to meter, since that's what OpenSpace wants
-        #     # TODO: Doesn't it want meter?
-        #     u = (u * unit).to_value(units.m)
-        #     v = (v * unit).to_value(units.m)
-        #     w = (w * unit).to_value(units.m)
+        # TODO: Unnormalize if normalized?
+
+
+        velocity_unit = simp.dist_unit_astropy_to_simp(
+            self._viewer_state.vel_distance_unit_att
+        ) #\
+        # + '/' \
+        # + simp.dist_unit_astropy_to_simp(
+        #     self._viewer_state.vel_time_unit_att
+        # )
+        # add velocity time unit
         
-        velocity_unit = self._viewer_state.vel_length_unit_att # + '/s' # TODO: Have a look at this...
         velocity_string = ''
         n_points_str = str(len(u))
-
+        self._viewer.debug(f'Velocity sample: [{u[0]}, {v[0]}, {w[0]}]')
         for i in range(len(u)):
             velocity_string += "["\
                 + float_to_hex(float(u[i])) + simp.SEP\

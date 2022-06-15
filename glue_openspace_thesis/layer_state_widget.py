@@ -83,5 +83,5 @@ class OpenSpaceLayerStateWidget(QWidget):
             self.ui.cmap_nan_value_stacked_widget.setCurrentIndex(0)
             
         elif self._radio_cmap_nan_mode.checkedId() == CmapNaNRadioButtonId.Color:
-            self.state.cmap_nan_mode = 'Color'
+            self.state.cmap_nan_mode = 'FixedColor'
             self.ui.cmap_nan_value_stacked_widget.setCurrentIndex(1)
