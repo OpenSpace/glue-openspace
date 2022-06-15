@@ -9,8 +9,7 @@ from glue.viewers.common.state import ViewerState
 from glue.viewers.matplotlib.state import (DeferredDrawSelectionCallbackProperty as DDSCProperty)
 
 DISTANCE_UNITS = [u.m, u.km, u.AU, u.lyr, u.pc, u.kpc, u.Mpc]
-TIME_UNITS = [u.s, u.h]
-# ALTERNATIVE_VELOCITY_UNITS = [u.m/u.s, u.km/u.s, u.AU/u.s, u.lyr/u.s, u.pc/u.s, u.kpc/u.s, u.Mpc/u.s]
+TIME_UNITS = [u.s, u.min, u.h, u.day, u.yr]
 
 # ALTERNATIVE_TYPES = ['Distance']
 COORDINATE_SYSTEMS = ['Cartesian', 'ICRS', 'FK5', 'FK4', 'Galactic']
@@ -31,12 +30,14 @@ class OpenSpaceViewerState(ViewerState):
 
     # Velocity
     velocity_mode = SelectionCallbackProperty(default_index=0)
-    # velocity_system = SelectionCallbackProperty(default_index=0) # TODO: This might be needed?
+    # TODO: Add this to set up more coordinate systems for velocity
+    # velocity_system = SelectionCallbackProperty(default_index=0)
     
     u_att = SelectionCallbackProperty(default_index=0, docstring='The attribute to use for u')
     v_att = SelectionCallbackProperty(default_index=1, docstring='The attribute to use for v')
     w_att = SelectionCallbackProperty(default_index=2, docstring='The attribute to use for w')
     vel_distance_unit_att = SelectionCallbackProperty(default_index=4, docstring='The velocity distance unit of the current dataset')
+    vel_time_unit_att = SelectionCallbackProperty(default_index=0, docstring='The velocity time unit of the current dataset')
     # vel_norm = CallbackProperty(docstring='Whether velocity is normalized') #, docstring='Whether or not velocity is normalized'
     # speed_att = SelectionCallbackProperty(default_index=3, docstring='The attribute to use for speed')
     vel_nan_mode: Union[Literal['Hide'], Literal['Static']] = DDSCProperty(docstring="Which velocity NaN value mode to use", default_index=0)
@@ -59,7 +60,7 @@ class OpenSpaceViewerState(ViewerState):
         OpenSpaceViewerState.cartesian_unit_att.set_choices(self, [str(x) for x in DISTANCE_UNITS])
         OpenSpaceViewerState.velocity_mode.set_choices(self, VELOCITY_MODES)
         OpenSpaceViewerState.vel_distance_unit_att.set_choices(self, [str(x) for x in DISTANCE_UNITS])
-        # OpenSpaceViewerState.vel_time_unit_att.set_choices(self, [str(x) for x in TIME_UNITS])
+        OpenSpaceViewerState.vel_time_unit_att.set_choices(self, [str(x) for x in TIME_UNITS])
         OpenSpaceViewerState.vel_nan_mode.set_choices(self, VELOCITY_NAN_MODES)
         # OpenSpaceViewerState.alt_type.set_choices(self, ALTERNATIVE_TYPES)
 

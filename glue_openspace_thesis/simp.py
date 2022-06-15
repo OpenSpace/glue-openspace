@@ -41,6 +41,13 @@ class Simp:
         Kiloparsec = 'kiloparsecs'
         Megaparsec = 'megaparsecs'
 
+    class TimeUnit(str, Enum):
+        Second = 'second'
+        Minute = 'minute'
+        Hour = 'hour'
+        Day = 'day'
+        Year = 'year'
+
     # astropy_to_simp_dist_unit = {
     #     ap_u.m : DistanceUnit.Meter,
 
@@ -206,5 +213,18 @@ class Simp:
             return simp.DistanceUnit.Megaparsec
         else:
             raise simp.SimpError(f'SIMP doesn\'t support the distance unit \'{astropy_unit}\'')
+
+    @staticmethod
+    def time_unit_astropy_to_simp(astropy_unit: str) -> str:
+        if (astropy_unit is ap_u.s.to_string()):
+            return simp.TimeUnit.Second
+        elif (astropy_unit is ap_u.min.to_string()):
+            return simp.TimeUnit.Minute
+        elif (astropy_unit is ap_u.h.to_string()):
+            return simp.TimeUnit.Hour
+        elif (astropy_unit is ap_u.yr.to_string()):
+            return simp.TimeUnit.Year
+        else:
+            raise simp.SimpError(f'SIMP doesn\'t support the time unit \'{astropy_unit}\'')
 
 simp = Simp()

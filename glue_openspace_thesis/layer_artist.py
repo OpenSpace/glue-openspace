@@ -36,6 +36,7 @@ VELOCITY_DATA_PROPERTIES = set([
     "v_att",
     "w_att",
     "vel_distance_unit_att",
+    "vel_time_unit_att",
     # "vel_norm",
     # "speed_att",
     # TODO: These NaN props 
@@ -321,19 +322,19 @@ class OpenSpaceLayerArtist(LayerArtist):
     def send_velocity_data(self):
         # Create string with coordinates for velocity data
         try:
-            velocity_unit, velocity_data_str, n_points_str = self.get_velocity_str()
+            velocity_dist_unit, velocity_time_unit, \
+            velocity_data_str, n_points_str = self.get_velocity_str()
             self._viewer.log(f'Sending velocity data for {n_points_str} points to OpenSpace')
             
             subject = (
                 self.get_subject_prefix() +
-                velocity_unit + simp.SEP +
+                velocity_dist_unit + simp.SEP +
+                velocity_time_unit + simp.SEP +
                 self._viewer_state.vel_nan_mode + simp.SEP +
                 n_points_str + simp.SEP +
                 str(3) + simp.SEP +
                 velocity_data_str + simp.SEP
-            )
-            self._viewer.debug(f'===> Velocity subject = {subject}')
-            
+            )            
             simp.send_simp_message(self._viewer, simp.SIMPMessageType.VelocityData, subject)
 
         except Exception as exc:
@@ -575,26 +576,22 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         # TODO: Unnormalize if normalized?
 
-
-        velocity_unit = simp.dist_unit_astropy_to_simp(
+        velocity_dist_unit = simp.dist_unit_astropy_to_simp(
             self._viewer_state.vel_distance_unit_att
-        ) #\
-        # + '/' \
-        # + simp.dist_unit_astropy_to_simp(
-        #     self._viewer_state.vel_time_unit_att
-        # )
-        # add velocity time unit
+        )
+        velocity_time_unit = simp.time_unit_astropy_to_simp(
+            self._viewer_state.vel_time_unit_att
+        )
         
         velocity_string = ''
         n_points_str = str(len(u))
-        self._viewer.debug(f'Velocity sample: [{u[0]}, {v[0]}, {w[0]}]')
         for i in range(len(u)):
             velocity_string += "["\
                 + float_to_hex(float(u[i])) + simp.SEP\
                 + float_to_hex(float(v[i])) + simp.SEP\
                 + float_to_hex(float(w[i])) + simp.SEP + "]"
 
-        return velocity_unit, velocity_string, n_points_str
+        return velocity_dist_unit, velocity_time_unit, velocity_string, n_points_str
 
     def get_colormap_str(self) -> tuple[str, str]:
         formatted_colormap = None
