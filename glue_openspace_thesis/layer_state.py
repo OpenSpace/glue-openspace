@@ -13,7 +13,7 @@ from glue.viewers.matplotlib.state import (DeferredDrawCallbackProperty as DDCPr
 
 COLOR_TYPES = ['Fixed', 'Linear']
 SIZE_TYPES = ['Fixed', 'Linear']
-CMAP_NAN_MODES = ['Hide', 'Color']
+CMAP_NAN_MODES = ['Hide', 'FixedColor']
 
 __all__ = ['OpenSpaceLayerState']
 
@@ -38,7 +38,7 @@ class OpenSpaceLayerState(LayerState):
     cmap_vmin = DDCProperty(docstring="The lower level for the colormap")
     cmap_vmax = DDCProperty(docstring="The upper level for the colormap")
     cmap = DDCProperty(docstring="The colormap to use (when in colormap mode)")
-    cmap_nan_mode: Union[Literal['Hide'], Literal['Color']] = DDSCProperty(docstring="Which colormap attribute NaN value mode to use", default_index=0)
+    cmap_nan_mode: Union[Literal['Hide'], Literal['FixedColor']] = DDSCProperty(docstring="Which colormap attribute NaN value mode to use", default_index=0)
     cmap_nan_color = CallbackProperty('#fcba03',docstring="The colormap attribute NaN value color")
 
     def __init__(self, layer=None, **kwargs):
@@ -59,8 +59,13 @@ class OpenSpaceLayerState(LayerState):
 
         self.color = self.layer.style.color
         self.alpha = self.layer.style.alpha
-
         self.size = self.layer.style.markersize
+        self.cmap = colormaps.members[0][1] # Set to first colormap
+
+        OpenSpaceLayerState.color_mode.set_choices(self, COLOR_TYPES)
+        OpenSpaceLayerState.size_mode.set_choices(self, SIZE_TYPES)
+        OpenSpaceLayerState.cmap_nan_mode.set_choices(self, CMAP_NAN_MODES)
+
         self.size_att_helper = ComponentIDComboHelper(self, 'size_att',
                                                      numeric=True,
                                                      categorical=False,
@@ -81,16 +86,9 @@ class OpenSpaceLayerState(LayerState):
                                                           upper='cmap_vmax',
                                                           limits_cache=self.limits_cache)
 
-        OpenSpaceLayerState.color_mode.set_choices(self, COLOR_TYPES)
-        OpenSpaceLayerState.size_mode.set_choices(self, SIZE_TYPES)
-        OpenSpaceLayerState.cmap_nan_mode.set_choices(self, CMAP_NAN_MODES)
-
-        
         self.add_callback('layer', self._on_layer_change)
         if layer is not None:
             self._on_layer_change()
-
-        self.cmap = colormaps.members[0][1] # Set to first colormap
 
         self.update_from_dict(kwargs)
 

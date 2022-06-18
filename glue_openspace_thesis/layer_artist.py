@@ -30,6 +30,24 @@ POINT_DATA_PROPERTIES = set([
     "alt_unit"
 ])
 
+VELOCITY_DATA_PROPERTIES = set([
+    "velocity_mode",
+    "u_att",
+    "v_att",
+    "w_att",
+    "vel_distance_unit_att",
+    "vel_time_unit_att",
+    # "vel_norm",
+    # "speed_att",
+    # TODO: These NaN props 
+    # probably need a message
+    # of their own. We don't 
+    # want to send all the 
+    # velocity data on every 
+    # mode/color change
+    "vel_nan_mode"
+])
+
 FIXED_COLOR_PROPERTIES = set(['color_mode', 'color'])
 CMAP_PROPERTIES = set(['color_mode', 'cmap_vmin', 'cmap_vmax', 'cmap', 'cmap_nan_mode', 'cmap_nan_color'])
 CMAP_ATTR_PROPERTIES = set(['color_mode', 'cmap_att'])
@@ -92,10 +110,11 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         point_data_changed = any(prop in changed for prop in POINT_DATA_PROPERTIES)
+        velocity_data_changed = any(prop in changed for prop in VELOCITY_DATA_PROPERTIES) and self._viewer_state.velocity_mode == 'Motion'
 
         has_changed_fixed_color = any(prop in changed for prop in FIXED_COLOR_PROPERTIES) and self.state.color_mode == 'Fixed'
-        has_changed_color_map = any(prop in changed for prop in CMAP_PROPERTIES) and self.state.color_mode == 'Linear'
-        has_changed_color_map_att = any(prop in changed for prop in CMAP_ATTR_PROPERTIES) and self.state.color_mode == 'Linear'
+        has_changed_colormap = any(prop in changed for prop in CMAP_PROPERTIES) and self.state.color_mode == 'Linear'
+        has_changed_colormap_att = any(prop in changed for prop in CMAP_ATTR_PROPERTIES) and self.state.color_mode == 'Linear'
 
         has_changed_fixed_size = any(prop in changed for prop in FIXED_SIZE_PROPERTIES) and self.state.size_mode == 'Fixed'
         has_changed_linear_size = any(prop in changed for prop in SIZE_PROPERTIES) and self.state.size_mode == 'Linear'
@@ -108,11 +127,11 @@ class OpenSpaceLayerArtist(LayerArtist):
         if has_changed_fixed_color:
             self.send_fixed_color()
 
-        if has_changed_color_map:
-            self.send_color_map()
+        if has_changed_colormap:
+            self.send_colormap()
 
-        if has_changed_color_map_att:
-            self.send_color_map_attrib_data()
+        if has_changed_colormap_att:
+            self.send_colormap_attrib_data()
 
         if has_changed_fixed_size:
             self.send_fixed_size()
@@ -130,8 +149,12 @@ class OpenSpaceLayerArtist(LayerArtist):
             self.send_point_data()
 
             if self.has_updated_points:
-                self.send_color_map_attrib_data()
+                self.send_colormap_attrib_data()
                 self.has_updated_points = False
+
+        if velocity_data_changed:
+            self.send_velocity_data()
+        
 
         # # On reselect of subset data, remove old scene graph node and resend data
         # if isinstance(self.state.layer, Subset):
@@ -218,15 +241,15 @@ class OpenSpaceLayerArtist(LayerArtist):
         subject = self.get_subject_prefix() + self.get_color_str() + simp.SEP
         simp.send_simp_message(self._viewer, simp.SIMPMessageType.Color, subject)
 
-    def send_color_map(self):
-        vmin_str, vmax_str = self.get_color_map_limits_str()
-        color_map_str, n_colors_str = self.get_color_map_str()
+    def send_colormap(self):
+        vmin_str, vmax_str = self.get_colormap_limits_str()
+        colormap_str, n_colors_str = self.get_colormap_str()
         cmap_nan_color = list(
             to_rgb(self.state.cmap_nan_color 
                     if (self.state.cmap_nan_color != None) 
                     else [0.0,1.0,0.0,1.0])
         )
-        cmap_nan_color_str = self.get_color_str(cmap_nan_color) + simp.SEP if self.state.cmap_nan_mode == 'Color' else ''
+        cmap_nan_color_str = self.get_color_str(cmap_nan_color) + simp.SEP if self.state.cmap_nan_mode == 'FixedColor' else ''
 
         subject = (
             self.get_subject_prefix() +
@@ -235,17 +258,17 @@ class OpenSpaceLayerArtist(LayerArtist):
             self.state.cmap_nan_mode + simp.SEP +
             cmap_nan_color_str + 
             n_colors_str + simp.SEP +
-            color_map_str + simp.SEP
+            colormap_str + simp.SEP
         )
         simp.send_simp_message(self._viewer, simp.SIMPMessageType.ColorMap, subject)
 
-    def send_color_map_attrib_data(self):
-        color_map_attrib_data_str, n_attrib_data_str = self.get_attrib_data_str(self.state.cmap_att)
+    def send_colormap_attrib_data(self):
+        colormap_attrib_data_str, n_attrib_data_str = self.get_attrib_data_str(self.state.cmap_att)
         subject = (
             self.get_subject_prefix() +
             "ColormapAttributeData" + simp.SEP +
             n_attrib_data_str + simp.SEP +
-            color_map_attrib_data_str + simp.SEP
+            colormap_attrib_data_str + simp.SEP
         )
         simp.send_simp_message(self._viewer, simp.SIMPMessageType.AttributeData, subject)
 
@@ -296,6 +319,27 @@ class OpenSpaceLayerArtist(LayerArtist):
         except Exception as exc:
             self._viewer.log(f'Exception in send_point_data: {str(exc)}')
 
+    def send_velocity_data(self):
+        # Create string with coordinates for velocity data
+        try:
+            velocity_dist_unit, velocity_time_unit, \
+            velocity_data_str, n_points_str = self.get_velocity_str()
+            self._viewer.log(f'Sending velocity data for {n_points_str} points to OpenSpace')
+            
+            subject = (
+                self.get_subject_prefix() +
+                velocity_dist_unit + simp.SEP +
+                velocity_time_unit + simp.SEP +
+                self._viewer_state.vel_nan_mode + simp.SEP +
+                n_points_str + simp.SEP +
+                str(3) + simp.SEP +
+                velocity_data_str + simp.SEP
+            )            
+            simp.send_simp_message(self._viewer, simp.SIMPMessageType.VelocityData, subject)
+
+        except Exception as exc:
+            self._viewer.log(f'Exception in send_velocity_data: {str(exc)}')
+
     def get_subject_prefix(self) -> str:
         identifier = self.get_identifier_str()
         gui_name = self.get_gui_name_str()
@@ -308,8 +352,8 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         if self.state.color_mode == 'Linear':
             # If in color map mode, send color map messages
-            self.send_color_map()
-            self.send_color_map_attrib_data()
+            self.send_colormap()
+            self.send_colormap_attrib_data()
         else:
             self.send_fixed_color()
 
@@ -320,7 +364,14 @@ class OpenSpaceLayerArtist(LayerArtist):
         else:
             self.send_fixed_size()
 
+        if self._viewer_state.velocity_mode == 'Motion':
+            # If in motion mode, send velocity data
+            self.send_velocity_data()
+
         self.state.has_sent_initial_data = True
+        self.pop_changed_properties()
+
+        
 
         # Clear properties that have been set on init or 
         # duplicate messages will be sent on next prop change 
@@ -376,6 +427,11 @@ class OpenSpaceLayerArtist(LayerArtist):
         # self.state.has_sent_initial_data = False
 
         if isinstance(self.state.layer, Data):
+            # TODO: Same dataset can be connected to multiple viewers and
+            # can be controlled from each. This is a bit unclear. Two options:
+            # 1. A dataset can be used in multiple viewers but are treated as different datasets
+            # 2. A dataset can onlu be used in one viewer at a time. Give a prompt that says 
+            #    that you can't have multiple viewers for same dataset, if user tries.
             self._viewer._main_layer_uuid = self.state.layer.uuid
             return self.state.layer.uuid
         elif isinstance(self.state.layer, Subset):
@@ -455,7 +511,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             
         else:
             frame = self._viewer_state.coordinate_system.lower()
-            unit = units.Unit(self._viewer_state.alt_unit)
+            unit = units.Unit(self._viewer_state.alt_unit) # TODO: Rename to dist_unit? 
 
             if self._viewer_state.alt_att is None or unit is None:
                 self.has_updated_points = True
@@ -509,25 +565,63 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         return coordinates_string, n_points_str
     
-    def get_color_map_str(self) -> tuple[str, str]:
-        formatted_color_map = None
+    def get_velocity_str(self) -> tuple[str, str, str]:
+        u_att = self.state.layer[self._viewer_state.u_att]
+        v_att = self.state.layer[self._viewer_state.v_att]
+        w_att = self.state.layer[self._viewer_state.w_att]
+
+        # Fail safe! u, v, w should all be the same length
+        min_len_uvw = min(len(u_att), len(v_att), len(w_att))
+        max_len_uvw = max(len(u_att), len(v_att), len(w_att))
+        u, v, w = [], [], []
+        for i in range(0, max_len_uvw):
+            if i in self._removed_indices:
+                continue
+            if i > min_len_uvw:
+                break
+            u.append(u_att[i])
+            v.append(v_att[i])
+            w.append(w_att[i])
+        u, v, w = np.array(u), np.array(v), np.array(w)
+
+        # TODO: Unnormalize if normalized?
+
+        velocity_dist_unit = simp.dist_unit_astropy_to_simp(
+            self._viewer_state.vel_distance_unit_att
+        )
+        velocity_time_unit = simp.time_unit_astropy_to_simp(
+            self._viewer_state.vel_time_unit_att
+        )
+        
+        velocity_string = ''
+        n_points_str = str(len(u))
+        for i in range(len(u)):
+            velocity_string += "["\
+                + float_to_hex(float(u[i])) + simp.SEP\
+                + float_to_hex(float(v[i])) + simp.SEP\
+                + float_to_hex(float(w[i])) + simp.SEP + "]"
+
+        return velocity_dist_unit, velocity_time_unit, velocity_string, n_points_str
+
+    def get_colormap_str(self) -> tuple[str, str]:
+        formatted_colormap = None
         if hasattr(self.state.cmap, 'colors'):
-            formatted_color_map = [[c[0], c[1], c[2], 1.0] for c in self.state.cmap.colors]
+            formatted_colormap = [[c[0], c[1], c[2], 1.0] for c in self.state.cmap.colors]
         else:
             # Has no underlying colors we can reach simply (according to our research)
             # Sample the color map with equal strides as many times as how many colors it's built with
             number_of_samples = self.state.cmap.N if self.state.cmap.N is not None else 256
             samples = get_normalized_list_of_equal_strides(number_of_samples)
-            formatted_color_map = [
+            formatted_colormap = [
                 [ch for ch in self.state.cmap(x)] for x in samples
             ]
 
-        n_colors_str = str(len(formatted_color_map))
-        color_map_str = ''.join([self.get_color_str(color) for color in formatted_color_map])
+        n_colors_str = str(len(formatted_colormap))
+        colormap_str = ''.join([self.get_color_str(color) for color in formatted_colormap])
 
-        return color_map_str, n_colors_str
+        return colormap_str, n_colors_str
 
-    def get_color_map_limits_str(self) -> tuple[str, str]:
+    def get_colormap_limits_str(self) -> tuple[str, str]:
         vmin = float_to_hex(float(self.state.cmap_vmin))
         vmax = float_to_hex(float(self.state.cmap_vmax))
         return vmin, vmax

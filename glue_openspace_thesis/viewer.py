@@ -32,6 +32,8 @@ from .layer_state_widget import OpenSpaceLayerStateWidget
 
 __all__ = ['OpenSpaceDataViewer']
 
+DEBUG = False # TODO: Always set this to False before committing!
+
 # TODO move this to later
 # TODO make this image selectable by user
 TEXTURE_ORIGIN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
@@ -58,7 +60,6 @@ class OpenSpaceDataViewer(DataViewer):
     _is_connected: bool
     _is_connecting: bool
     _lost_connection: bool
-    _has_been_connected: bool
 
     _failed_socket_read_retries: int
     
@@ -113,7 +114,6 @@ class OpenSpaceDataViewer(DataViewer):
         self._thread_running = False
         self._threadCommsRx = None
 
-        self._has_been_connected = False
         self._is_connected = False
         self._is_connecting = False
         self._lost_connection = False
@@ -232,12 +232,13 @@ class OpenSpaceDataViewer(DataViewer):
     #     self.resize_window()
 
     def set_connection_state(self, new_state: ConnectionState):
+        self.debug(f'Executing set_connection_state()')
+        
         # Set button enabled/disabled and button text
         if new_state == self.ConnectionState.Connected:
             self.connection_button.setText('Disconnect')
             self.connection_button.setEnabled(True)
             self._is_connected = True
-            self._has_been_connected = True
             self._is_connecting = False
         
         elif new_state == self.ConnectionState.Disconnected:
@@ -263,6 +264,11 @@ class OpenSpaceDataViewer(DataViewer):
         # new_msg.setAlignment(Qt.AlignLeft)
         # self.log_widget.addWidget(new_msg)
         return
+
+    def debug(self, msg: str):
+        if (DEBUG is False): 
+            return
+        self.log('(DEBUG) ' + msg)
 
     def resize_window(self):
         qApp.processEvents()
@@ -315,6 +321,7 @@ class OpenSpaceDataViewer(DataViewer):
                 self.receive_message()
 
         except simp.DisconnectionException:
+            self.debug(f'request_listen(): simp.DisconnectionException')
             pass
 
         except Exception as exc:
@@ -339,6 +346,7 @@ class OpenSpaceDataViewer(DataViewer):
 
     # Connection handshake to ensure connection is established
     def receive_handshake(self):
+        self.debug(f'Executing receive_handshake()')
         message_received = self.read_socket()
 
         message_type, _ = simp.parse_message(self, message_received)
@@ -354,6 +362,7 @@ class OpenSpaceDataViewer(DataViewer):
             layer.update(force=True)
 
     def receive_message(self):
+        self.debug(f'Executing receive_message()')
         message_received = self.read_socket()
 
         message_type, subject = simp.parse_message(self, message_received)
@@ -377,6 +386,7 @@ class OpenSpaceDataViewer(DataViewer):
 
     @messagebox_on_error('An error occurred when trying to reset socket:', sep=' ')
     def reset_socket(self):
+        self.debug(f'Executing reset_socket()')
         try:
             ip = self.ip_textfield.text().lower()
             if len(ip) < 8:
@@ -432,14 +442,11 @@ class OpenSpaceDataViewer(DataViewer):
 
     @messagebox_on_error('An error occurred when trying to disconnect from OpenSpace:', sep=' ')
     def disconnect_from_openspace(self):
-        self.stop_socket_thread()
+        if self._socket is None:
+            return
 
-        if self._has_been_connected:
-            try:
-                # Send "DISC" message to OpenSpace
-                simp.send_simp_message(self, simp.SIMPMessageType.Disconnection)
-            except:
-                self.log("Didn't send disconnection message to OpenSpace")
+        self.debug(f'Executing disconnect_from_openspace()')
+        self.stop_socket_thread()
 
         try:
             self._socket.shutdown(socket.SHUT_RDWR)
@@ -449,8 +456,8 @@ class OpenSpaceDataViewer(DataViewer):
         finally:
             self._socket = None
 
-        # Reset _has_sent_initial_data so that layers send all data on next connection
-        [setattr(layer, '_has_sent_initial_data', False) for layer in self.layers]
+        # Reset has_sent_initial_data so that layers send all data on next connection
+        [setattr(self.layers[i].state, 'has_sent_initial_data', False) for i in range(len(self.layers))]
 
         self._lost_connection = False
         
