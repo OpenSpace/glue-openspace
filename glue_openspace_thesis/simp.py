@@ -1,10 +1,9 @@
 from enum import Enum
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Type, Union
 
 from astropy import units as ap_u
-
-from .utils import POLL_RETRIES, WAIT_TIME, hex_to_float
+from .utils import POLL_RETRIES, WAIT_TIME, bytes_to_bool, bytes_to_float32, Version, bytes_to_int32
 
 if TYPE_CHECKING:
     from .viewer import OpenSpaceDataViewer
@@ -14,23 +13,62 @@ else:
 
 __all__ = ['simp']
 
-class Simp:
-    protocol_version = '1.9'
-    SEP = ';'
 
-    class SIMPMessageType(str, Enum):
+class Simp:
+    protocol_version = Version(1, 9, 1)
+    DELIM = ';'
+    DELIM_BYTES = bytearray(DELIM, 'utf-8')
+
+    class MessageType(str, Enum):
         Connection = 'CONN'
-        Disconnection = 'DISC'
-        PointData = 'PDAT'
-        VelocityData = 'VDAT'
+        Data = 'DATA'
         RemoveSceneGraphNode = 'RSGN'
-        Color = 'FCOL'
-        ColorMap = 'LCOL'
-        AttributeData = 'ATDA'
-        Opacity = 'FOPA'
-        FixedSize = 'FPSI'
-        LinearSize = 'LPSI'
-        Visibility = 'TOVI'
+
+    class DataKey(str, Enum):
+        # Point
+        X = 'pos.x'
+        Y = 'pos.y'
+        Z = 'pos.z'
+        # Ra = 'pos.ra'
+        # Dec = 'pos.dec'
+        # Distance = 'pos.dist'
+        PointUnit = 'pos.unit'
+        # Velocity
+        U = 'vel.u'
+        V = 'vel.v'
+        W = 'vel.w'
+        VelocityDistanceUnit = 'vel.unit.dist'
+        VelocityTimeUnit = 'vel.unit.time'
+        VelocityNanMode = 'vel.nan.mode'
+        VelocityEnabled = 'vel.enable'
+        # Color
+        Red = 'col.r'
+        Green = 'col.g'
+        Blue = 'col.b'
+        Alpha = 'col.a'
+        # Colormap
+        ColormapEnabled = 'cmap.enable'
+        ColormapRed = 'cmap.r'
+        ColormapGreen = 'cmap.g'
+        ColormapBlue = 'cmap.b'
+        ColormapAlpha = 'cmap.a'
+        ColormapMin = 'cmap.min'
+        ColormapMax = 'cmap.max'
+        ColormapNanR = 'cmap.nan.r'
+        ColormapNanG = 'cmap.nan.g'
+        ColormapNanB = 'cmap.nan.b'
+        ColormapNanA = 'cmap.nan.a'
+        ColormapNanMode = 'cmap.nan.mode'
+        ColormapAttributeData = 'cmap.attr'
+        # Fixed size
+        FixedSize = 'size.val'
+        # Linear size
+        LinearSizeEnabled = 'lsize.enabled'
+        LinearSizeMin = 'lsize.min'
+        LinearSizeMax = 'lsize.max'
+        LinearSizeAttributeData = 'lsize.attr'
+        # Visibility
+        Visibility = 'vis.val'
 
     class DistanceUnit(str, Enum):
         Meter = 'meters'
@@ -48,10 +86,6 @@ class Simp:
         Day = 'day'
         Year = 'year'
 
-    # astropy_to_simp_dist_unit = {
-    #     ap_u.m : DistanceUnit.Meter,
-
-    # }
     class DisconnectionException(Exception):
         pass
 
@@ -60,23 +94,18 @@ class Simp:
             self.message = message
 
     @staticmethod
-    def send_simp_message(viewer: OpenSpaceDataViewer, message_type: SIMPMessageType, subject=''):
-        length_of_subject = str(format(len(subject), '015d')) # formats to a 15 character string
-        message = simp.protocol_version + message_type + length_of_subject + subject
+    def send_simp_message(viewer: OpenSpaceDataViewer, message_type: MessageType, subjectBuffer = bytearray()):
+        print(f'Executing send_simp_message() (message_type={message_type})')
+        length_of_subject = str(format(len(subjectBuffer), '015d')) # formats to a 15 character string
+        message = bytes(str(simp.protocol_version) + message_type + length_of_subject, 'utf-8') + subjectBuffer
 
-        # subject_print_str = ', Subject[0:' + (length_of_subject if len(subject) < 40 else "40")
-        # subject_print_str += ']: ' + (subject if len(subject) < 40 else (subject[:40] + "..."))
-        # print_str = 'Protocol version: ' + simp.protocol_version\
-        #             + ', Message type: ' + message_type\
-        #             + subject_print_str
-        # viewer.log(f'Sending SIMP message: ({print_str})')
-        simp.print_simp_message(viewer, message_type, subject, length_of_subject)
+        # simp.print_simp_message(viewer, message_type, subject, length_of_subject)
         
         send_retries = 0
         message_sent = False
         while not message_sent and send_retries < POLL_RETRIES:
             try:
-                viewer._socket.sendall(bytes(message, 'utf-8'))
+                viewer._socket.sendall(message)
                 message_sent = True
             except:
                 send_retries += 1
@@ -84,110 +113,121 @@ class Simp:
 
         if not message_sent:
             viewer._lost_connection = True
-
+        
     @staticmethod
-    def parse_message(viewer: OpenSpaceDataViewer, message: str):
-        # Start and end are message offsets
-        start = 0
-        end = 3
-        protocol_version_in = message[start:end]
-        if protocol_version_in != simp.protocol_version:
+    def parse_message(viewer: OpenSpaceDataViewer, message: bytearray):
+        header_str = message[0:24].decode('utf-8')
+
+        protocol_version_in = header_str[0:5]
+        if protocol_version_in != str(simp.protocol_version):
             viewer.log('Mismatch in protocol versions')
             raise simp.DisconnectionException
 
-        start = end
-        end = start + 4 
-        message_type = message[start:end]
+        message_type = header_str[5:9]
 
-        start = end
-        end = start + 15
-        length_of_subject = int(message[start: end])
+        length_of_subject = int(header_str[9:])
 
-        start = end
-        end = start + length_of_subject
-        subject = message[start:end]
+        subject = message[24:(24 + length_of_subject)]
 
         return message_type, subject
 
     @staticmethod
-    def is_end_of_current_value(message: str, offset: int) -> bool:
-        if offset >= len(message):
-            raise simp.SimpError("Unexpectedly reached the end of the message...")
+    def check_offset(message: bytearray, _offset: Union[int, list[int]]):
+        offsets: list[int]
+        if isinstance(_offset, list):
+            offsets = _offset
+        else:
+            offsets = [_offset]
 
-        if (len(message) > 0 and offset == len(message) - 1 and message[offset] != simp.SEP):
-            raise simp.SimpError("Reached end of message before reading separator character...")
+        for offset in offsets:
+            if offset > len(message):
+                raise simp.SimpError('Offset is larger than length of message...')
 
-        return offset > 0 and message[offset] == simp.SEP and message[offset - 1] != '\\'
+            if offset < 0:
+                raise simp.SimpError(f'Offset was {offset}, has to be >= 0')
 
     @staticmethod
-    def read_float(message: str, offset: int) -> tuple[float, int]:
-        string_value = ''
-
-        while not simp.is_end_of_current_value(message, offset):
-            string_value += message[offset]
-            offset += 1
+    def read_float32(message: bytearray, offset: int) -> tuple[float, int]:
+        simp.check_offset(message, [offset, (offset + 4)])
+        byte_buffer = message[offset:(offset + 4)]
 
         try:
-            value = hex_to_float(string_value)
+            value = bytes_to_float32(byte_buffer)
         except:
-            raise simp.SimpError(f'Error when trying to parse the float {string_value}')
+            raise simp.SimpError(f'Error when trying to parse a float at offset={offset}')
 
-        offset += 1
+        offset += len(byte_buffer)
         return value, offset
 
     @staticmethod
-    def read_int(message: str, offset: int) -> tuple[int, int]:
-        string_value = ''
-
-        while not simp.is_end_of_current_value(message, offset):
-            string_value += message[offset]
-            offset += 1
+    def read_int32(message: bytearray, offset: int) -> tuple[int, int]:
+        simp.check_offset(message, [offset, (offset + 4)])
+        byte_buffer = message[offset:(offset + 4)]
 
         try:
-            value = int(string_value)
+            value = bytes_to_int32(byte_buffer)
         except:
-            raise simp.SimpError(f'Error when trying to parse the float {string_value}')
+            raise simp.SimpError(f'Error when trying to parse an int at offset={offset}')
 
-        offset += 1
+        offset += len(byte_buffer)
         return value, offset
 
     @staticmethod
-    def read_single_color(message: str, offset: int) -> tuple[tuple[float, float, float, float], int]:
-        color, offset = simp.read_color(message, offset)
-        offset += 1
-        return color, offset
+    def read_bool(message: bytearray, offset: int) -> tuple[bool, int]:
+        simp.check_offset(message, [offset, (offset + 1)])
+        byte_buffer = message[offset:(offset + 1)]
+
+        try:
+            value = bytes_to_bool(byte_buffer)
+        except:
+            raise simp.SimpError(f'Error when trying to parse a bool at offset={offset}')
+
+        offset += len(byte_buffer)
+        return value, offset
+
+    # @staticmethod
+    # def read_single_color(message: bytearray, offset: int) -> tuple[tuple[float, float, float, float], int]:
+    #     color, offset = simp.read_color(message, offset)
+    #     offset += 1
+    #     return color, offset
+
+    # @staticmethod
+    # def read_color(message: bytearray, offset: int) -> tuple[tuple[float, float, float, float], int]:
+    #     if message[offset] != '[':
+    #         raise simp.SimpError(f'Expected to read "[", got {message[offset]} in "readColor"')
+    #     offset += 1
+
+    #     r, offset = simp.read_float32(message, offset)
+    #     g, offset = simp.read_float32(message, offset)
+    #     b, offset = simp.read_float32(message, offset)
+    #     a, offset = simp.read_float32(message, offset)
+
+    #     if message[offset] != ']':
+    #         raise simp.SimpError(f'Expected to read "]", got {message[offset]} in "readColor"')
+    #     offset += 1
+
+    #     return (r, g, b, a), offset
 
     @staticmethod
-    def read_color(message: str, offset: int) -> tuple[tuple[float, float, float, float], int]:
-        if message[offset] != '[':
-            raise simp.SimpError(f'Expected to read "[", got {message[offset]} in "readColor"')
-        offset += 1
-
-        r, offset = simp.read_float(message, offset)
-        g, offset = simp.read_float(message, offset)
-        b, offset = simp.read_float(message, offset)
-        a, offset = simp.read_float(message, offset)
-
-        if message[offset] != ']':
-            raise simp.SimpError(f'Expected to read "]", got {message[offset]} in "readColor"')
-        offset += 1
-
-        return (r, g, b, a), offset
-
-    @staticmethod
-    def read_string(message: str, offset: int) -> tuple[str, int]:
+    def read_string(message: bytearray, offset: int) -> tuple[str, int]:
         value: str = ''
 
-        while not simp.is_end_of_current_value(message, offset):
-            value += message[offset]
-            offset += 1
+        delimiter_offset = message.find(simp.DELIM_BYTES, offset)
+        while message.find(bytearray('\\', 'utf-8'), delimiter_offset-1, delimiter_offset) != -1:
+            delimiter_offset = message.find(simp.DELIM_BYTES, delimiter_offset + 1)
 
-        offset += 1
+        if delimiter_offset == -1:
+            raise simp.SimpError(f'No delimiter found for string')
+
+        simp.check_offset(message, [offset, delimiter_offset])
+
+        value = str(message[offset:delimiter_offset], "utf-8")
+        offset = delimiter_offset + 1
 
         return value, offset
 
     @staticmethod
-    def print_simp_message(viewer: OpenSpaceDataViewer, message_type: SIMPMessageType, subject='', length_of_subject=-1):
+    def print_simp_message(viewer: OpenSpaceDataViewer, message_type: MessageType, subject='', length_of_subject=-1):
         subject_print_str = ', Subject[0:' + (length_of_subject if len(subject) < 40 else "40")
         subject_print_str += ']: ' + (subject if len(subject) < 40 else (subject[:40] + "..."))
         print_str = 'Protocol version: ' + simp.protocol_version\
@@ -197,6 +237,13 @@ class Simp:
 
     @staticmethod
     def dist_unit_astropy_to_simp(astropy_unit: str) -> str:
+        if not isinstance(astropy_unit, str):
+            raise simp.SimpError(
+                f'The provided unit \'{astropy_unit}\' '\
+                + f'is of type \'{type(astropy_unit)}\'. '\
+                + f'It must be of type {type(str())}'
+            )
+
         if (astropy_unit is ap_u.m.to_string()):
             return simp.DistanceUnit.Meter
         elif (astropy_unit is ap_u.km.to_string()):
@@ -212,10 +259,19 @@ class Simp:
         elif (astropy_unit is ap_u.Mpc.to_string()):
             return simp.DistanceUnit.Megaparsec
         else:
-            raise simp.SimpError(f'SIMP doesn\'t support the distance unit \'{astropy_unit}\'')
+            raise simp.SimpError(
+                f'SIMP doesn\'t support the distance unit \'{astropy_unit}\''
+            )
 
     @staticmethod
     def time_unit_astropy_to_simp(astropy_unit: str) -> str:
+        if not isinstance(astropy_unit, str):
+            raise simp.SimpError(
+                f'The provided unit \'{astropy_unit}\' '\
+                + f'is of type \'{type(astropy_unit)}\'. '\
+                + f'It must be of type {type(str())}'
+            )
+        
         if (astropy_unit is ap_u.s.to_string()):
             return simp.TimeUnit.Second
         elif (astropy_unit is ap_u.min.to_string()):
@@ -225,6 +281,8 @@ class Simp:
         elif (astropy_unit is ap_u.yr.to_string()):
             return simp.TimeUnit.Year
         else:
-            raise simp.SimpError(f'SIMP doesn\'t support the time unit \'{astropy_unit}\'')
-
+            raise simp.SimpError(
+                f'SIMP doesn\'t support the time unit \'{astropy_unit}\''
+            )
+    
 simp = Simp()

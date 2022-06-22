@@ -4,87 +4,55 @@ import typing
 
 __all__ = [
     'WAIT_TIME', 'POLL_RETRIES', 'get_normalized_list_of_equal_strides', 
-    'float_to_hex', 'hex_to_float',
-    'filter_lon_lat', 'filter_cartesian', 'print_attr_of_object_recursive'
+    'float32_to_bytes', 'bytes_to_float32', 'int32_to_bytes', 'bytes_to_int32',
+    'bool_to_bytes', 'bytes_to_bool', 'Version', 'print_attr_of_object_recursive'
 ]
 
 WAIT_TIME = 0.5 # Time to wait before next poll
 POLL_RETRIES = 10 # Amount of retries in sending a message to OpenSpace
 
-# # DOESN'T WORK! USED FOR TESTING FOR FUTURE WORK
-# def get_luminosity_data(data, luminosity_attribute):
-#     luminosity_data = ""
+class Version:
+    major: int
+    minor: int
+    patch: int
 
-#     luminosity_values = data[luminosity_attribute]
+    def __init__(self, major: int, minor: int, patch: int):
+        self.major = major
+        self.minor = minor
+        self.patch = patch
 
-#     for i in range(len(luminosity_values)):
-#         luminosity_data += (str(luminosity_values[i]) + ",")
+    def __repr__(self):
+        return f'{self.major}.{self.minor}.{self.patch}'
 
-#     length_luminosity_data = str(format(len(luminosity_data), "09"))
-
-#     luminosity_data_string = length_luminosity_data + luminosity_data
-#     return luminosity_data_string
-
-# # DOESN'T WORK! USED FOR TESTING FOR FUTURE WORK
-# def get_velocity_data(data, velocity_attribute):
-#     velocity_data = ""
-
-#     velocity_values = data[velocity_attribute]
-
-#     for i in range(len(velocity_values)):
-#         velocity_data += (str(velocity_values[i]) + ",")
-
-#     length_velocity_data = str(format(len(velocity_data), "09"))
-
-#     velocity_data_string = length_velocity_data + velocity_data
-#      return velocity_data_string
+    def __format__(self):
+        return self.__repr__()
 
 def get_normalized_list_of_equal_strides(amount = 256):
     return [i/amount for i in range(amount)]
 
-def float_to_hex(f):
-    return hex(struct.unpack('<I', struct.pack('<f', f))[0])
+# Convert to network byte order (big-endian)
+def int32_to_bytes(i: int) -> bytearray:
+    byte_array_int = bytearray(struct.pack('!i', i))
+    print(f'\tByte length of converted int={len(byte_array_int)}')
+    return byte_array_int
 
-def hex_to_float(f):
-    as_bytes = bytearray.fromhex(f.lstrip('0x').rstrip('L'))
-    return struct.unpack('>f', as_bytes)[0]
+def bool_to_bytes(b: bool) -> bytearray:
+    return bytearray(struct.pack('!?', b))
 
-def filter_cartesian(_x: np.ndarray, _y: np.ndarray, _z: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    x = []
-    y = []
-    z = []
-    removed_indices = []
-    
-    for i in range(len(_x)):
-        if np.any(np.isnan(np.array([ _x[i], _y[i], _z[i] ]))):
-            removed_indices.append(i)
-        else:
-            x.append(_x[i])
-            y.append(_y[i])
-            z.append(_z[i])
+def float32_to_bytes(f: float) -> bytearray:
+    return bytearray(struct.pack('!f', f))
 
-    removed_indices = np.unique(np.array(removed_indices))
+def float32_list_to_bytes(fl: list[float]) -> bytearray:
+    return struct.pack(f'!{len(fl)}f', *fl)
 
-    return np.array(x), np.array(y), np.array(z), removed_indices
+def bytes_to_int32(i: bytearray) -> int:
+    return int(struct.unpack('!i', i)[0])
 
-def filter_lon_lat(_lon: np.ndarray, _lat: np.ndarray, _dist: typing.Optional[np.ndarray] = None) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    lon = []
-    lat = []
-    dist = None if _dist is None else []
-    removed_indices = []
+def bytes_to_bool(b: bytearray) -> bool:
+    return bool(struct.unpack('!?', b)[0])
 
-    for i in range(len(_lon)):
-        if np.any(np.isnan(np.array([ _lon[i], _lat[i], 0 if _dist is None else _dist[i] ]))):
-            removed_indices.append(i)
-        else:
-            lon.append(_lon[i])
-            lat.append(_lat[i])
-            if dist is not None:
-                dist.append(_dist[i])
-
-    removed_indices = np.unique(np.array(removed_indices))
-
-    return lon, lat, dist, removed_indices
+def bytes_to_float32(f: bytearray) -> float:
+    return float(struct.unpack('!f', f)[0])
 
 def print_attr_of_object_recursive(obj, depth = 2, call_callables = False):
     initial_depth = depth
