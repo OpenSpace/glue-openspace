@@ -12,7 +12,7 @@ DISTANCE_UNITS = [u.m, u.km, u.AU, u.lyr, u.pc, u.kpc, u.Mpc]
 TIME_UNITS = [u.s, u.min, u.h, u.day, u.yr]
 
 # ALTERNATIVE_TYPES = ['Distance']
-COORDINATE_SYSTEMS = ['Cartesian', 'ICRS', 'FK5', 'FK4', 'Galactic']
+COORDINATE_SYSTEMS = ['Cartesian', 'ICRS']# , 'FK5', 'FK4', 'Galactic']
 VELOCITY_MODES = ['Static', 'Motion']
 VELOCITY_NAN_MODES = ['Hide', 'Static']
 
@@ -21,7 +21,7 @@ __all__ = ['OpenSpaceViewerState']
 class OpenSpaceViewerState(ViewerState):
     
     # Coordinate system
-    coordinate_system = SelectionCallbackProperty(default_index=0)
+    coordinate_system: Union[Literal['Cartesian'], Literal['ICRS']] = SelectionCallbackProperty(default_index=0)
 
     x_att = SelectionCallbackProperty(docstring='The attribute to use for x')
     y_att = SelectionCallbackProperty(docstring='The attribute to use for y')

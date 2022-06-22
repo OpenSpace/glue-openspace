@@ -3,13 +3,13 @@ import os
 import shutil
 import socket
 import tempfile
-from threading import Thread
+from threading import Condition, Thread, Lock
 import time
 from uuid import uuid4
 from typing import Union
 
 from qtpy.QtCore import Qt
-from qtpy.QtGui import QImage, QPixmap, QIcon, QCursor
+from qtpy.QtGui import  QPixmap, QCursor
 from qtpy.QtWidgets import (
     QLabel, QLineEdit, QGridLayout, QPushButton,
     QWidget, QSpacerItem, QSizePolicy, QHBoxLayout,
@@ -23,7 +23,7 @@ from glue.viewers.common.qt.data_viewer import DataViewer
 from glue.viewers.common.qt.toolbar import BasicToolbar
 
 from .simp import simp
-from .utils import WAIT_TIME
+from .utils import WAIT_TIME, int32_to_bytes
 
 from .viewer_state import OpenSpaceViewerState
 from .layer_artist import OpenSpaceLayerArtist
@@ -32,16 +32,26 @@ from .layer_state_widget import OpenSpaceLayerStateWidget
 
 __all__ = ['OpenSpaceDataViewer']
 
-DEBUG = False # TODO: Always set this to False before committing!
 
-# TODO move this to later
-# TODO make this image selectable by user
+class DebugMode(int, Enum):
+    Off = 0,
+    On = 1,
+    Verbose = 2
+DEBUG = DebugMode.Off # TODO: Always set this to Off before committing!
+DEBUG_VERBOSICITY = 1
+
 TEXTURE_ORIGIN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
 TEXTURE = tempfile.mktemp(suffix='.png')
 shutil.copy(TEXTURE_ORIGIN, TEXTURE)
 LOGO = os.path.abspath(os.path.join(os.path.dirname(__file__), 'logo.png'))
 
 class OpenSpaceDataViewer(DataViewer):
+    class ConnectionState(Enum):
+        Disconnected = 0,
+        Connected = 1,
+        Connecting = 2,
+        SendingData = 3,
+
     LABEL = 'OpenSpace Viewer'
     _state_cls = OpenSpaceViewerState
     _data_artist_cls = OpenSpaceLayerArtist
@@ -57,9 +67,17 @@ class OpenSpaceDataViewer(DataViewer):
     _thread_running: bool
     _threadCommsRx: Union[Thread, None]
 
+    _outgoing_data_message: dict[str, dict[simp.DataKey, tuple[bytearray, int]]]
+    _outgoing_data_message_mutex: Lock
+    _outgoing_data_message_thread_running: bool
+    _outgoing_data_message_thread: Union[Thread, None]
+    _outgoing_data_message_condition: Condition
+
     _is_connected: bool
     _is_connecting: bool
     _lost_connection: bool
+
+    _connection_state: ConnectionState
 
     _failed_socket_read_retries: int
     
@@ -80,11 +98,6 @@ class OpenSpaceDataViewer(DataViewer):
     layer_identifiers = []
 
     _main_layer_uuid: str
-
-    class ConnectionState(Enum):
-        Disconnected = 0,
-        Connected = 1,
-        Connecting = 2,
 
     # @classmethod
     # @messagebox_on_error("Failed to open viewer. Another OpenSpace viewer already contains that layer.")
@@ -114,6 +127,14 @@ class OpenSpaceDataViewer(DataViewer):
         self._thread_running = False
         self._threadCommsRx = None
 
+        self._outgoing_data_message = {}
+        self._outgoing_data_message_mutex = Lock()
+        self._outgoing_data_message_thread_running = False
+        self._outgoing_data_message_thread = None
+        self._outgoing_data_message_condition = Condition()
+
+        self._connection_state = self.ConnectionState.Disconnected
+
         self._is_connected = False
         self._is_connecting = False
         self._lost_connection = False
@@ -131,7 +152,9 @@ class OpenSpaceDataViewer(DataViewer):
 
         self.allow_duplicate_data = False
         self.allow_duplicate_subset = False
-        self.large_data_size = 1000000
+
+    def __del__(self):
+        self.disconnect_from_openspace()
 
     def init_ui(self):
         grid_layout = QGridLayout()
@@ -231,9 +254,11 @@ class OpenSpaceDataViewer(DataViewer):
 
     #     self.resize_window()
 
-    def set_connection_state(self, new_state: ConnectionState):
-        self.debug(f'Executing set_connection_state()')
-        
+    def set_connection_state(self, new_state: ConnectionState) -> ConnectionState:
+        self.debug(f'Executing set_connection_state()', 4)
+        old_connection_state = self._connection_state
+        self._connection_state = new_state
+    
         # Set button enabled/disabled and button text
         if new_state == self.ConnectionState.Connected:
             self.connection_button.setText('Disconnect')
@@ -250,8 +275,14 @@ class OpenSpaceDataViewer(DataViewer):
         elif new_state == self.ConnectionState.Connecting:
             self.connection_button.setText('Connecting')
             self.connection_button.setEnabled(False)
+            self._is_connecting = True
+
+        elif new_state == self.ConnectionState.SendingData:
+            self.connection_button.setText('Sending data...')
+            self.connection_button.setEnabled(False)
 
         qApp.processEvents()
+        return old_connection_state
 
     def log(self, msg: str):
         print(f'OpenSpace Viewer ({self._viewer_identifier}): {msg}')
@@ -265,10 +296,15 @@ class OpenSpaceDataViewer(DataViewer):
         # self.log_widget.addWidget(new_msg)
         return
 
-    def debug(self, msg: str):
-        if (DEBUG is False): 
+    def debug(self, msg: str, log_level: int = 1):
+        """
+        Set DEBUG_VERBOSICITY at the top of the file
+        """
+        if DEBUG == DebugMode.Off:
             return
-        self.log('(DEBUG) ' + msg)
+        
+        if log_level <= DEBUG_VERBOSICITY:
+            self.log('(DEBUG) ' + msg)
 
     def resize_window(self):
         qApp.processEvents()
@@ -282,6 +318,74 @@ class OpenSpaceDataViewer(DataViewer):
         self.viewer_size = (width + 5, height + 5)
 
         qApp.processEvents()
+
+    def start_outgoing_data_message_thread(self):
+        self.debug(f'Executing start_outgoing_data_message_thread()', 4)
+        if (self._outgoing_data_message_thread == None) or (not self._outgoing_data_message_thread.is_alive()): 
+            self._outgoing_data_message_thread = Thread(target=self.outgoing_data_message_loop)
+            self._outgoing_data_message_thread_running = True
+            self._outgoing_data_message_thread.start()
+
+    def stop_outgoing_data_message_thread(self):
+        self._outgoing_data_message_thread_running = False
+        self._outgoing_data_message_thread = None
+
+    def outgoing_data_message_loop(self):
+        self._outgoing_data_message_condition.acquire()
+        self.debug(f'Executing outgoing_data_message_loop()', 4)
+        counter = 1
+
+        while self._outgoing_data_message_thread_running:
+            # Block excecution on this thread for as long as outgoing 
+            # message mutex is locked or outgoing message is empty
+            def outgoing_data_message_is_ready():
+                if len(self._outgoing_data_message.items()) == 0:
+                    return False
+
+                if self._outgoing_data_message_mutex.locked():
+                    return False
+                
+                return any([len(x.items()) > 0 for (_, x) in self._outgoing_data_message.items()])
+
+            self._outgoing_data_message_condition.wait_for(outgoing_data_message_is_ready)
+
+            self.debug(f'Handling outgoing_data_message {counter}', 1)
+            counter += 1
+
+            # Lock outgoing message mutex so that other threads cannot 
+            # mutate the list while gathering all data to be sent
+            self._outgoing_data_message_mutex.acquire()
+            old_connection_state = self.set_connection_state(self.ConnectionState.SendingData)
+
+            for layer in self.layers:
+                layer_identifier = layer.get_identifier_str()
+                if not layer_identifier or not layer_identifier in self._outgoing_data_message:
+                    continue
+
+                layer_outgoing_data_message = self._outgoing_data_message[layer_identifier]
+                if len(layer_outgoing_data_message.items()) == 0:
+                    continue
+
+                subject_buffer = bytearray() + bytes(layer.get_subject_prefix(), 'utf-8')
+                for simp_key, (data_buffer, n_vals) in layer_outgoing_data_message.items():
+                    subject_buffer += bytearray(str(simp_key + simp.DELIM), 'utf-8')
+                    n_vals_str = f'{n_vals} ' if n_vals > 1 else ''
+                    self.log(f'Sending {n_vals_str}{simp_key} to OpenSpace')
+                    if (n_vals > 1):
+                        subject_buffer += int32_to_bytes(n_vals) # Get 32 bits (4 bytes)
+                    subject_buffer += data_buffer
+                
+                self._outgoing_data_message[layer_identifier].clear()
+                # Release lock, so that other threads can mutate the outgoing message
+                self._outgoing_data_message_mutex.release()
+
+                if len(subject_buffer):
+                    simp.send_simp_message(self, simp.MessageType.Data, subject_buffer)
+                    layer.state.has_sent_initial_data = True
+                
+            self.set_connection_state(old_connection_state)
+
+        self._outgoing_data_message_condition.release()
         
     def start_socket_thread(self):
         if (self._threadCommsRx == None) or (not self._threadCommsRx.is_alive()): 
@@ -304,11 +408,12 @@ class OpenSpaceDataViewer(DataViewer):
                     raise Exception('Lost connection to OpenSpace...')
 
                 if self._is_connecting:
+                    self.log('Trying to receive handshake...')
                     # If it takes more than 20 polls (approx 10 seconds when WAIT_TIME is 0.5s)
                     # to connect to OpenSpace: cancel the connection attempt
                     if connection_check_retries > 20:
                         time.sleep(WAIT_TIME)
-                        raise Exception("Connection timeout reached. Could not establish connection to OpenSpace...")
+                        raise Exception('Connection timeout reached. Could not establish connection to OpenSpace...')
 
                     connection_check_retries += 1
                     self.receive_handshake()
@@ -321,7 +426,7 @@ class OpenSpaceDataViewer(DataViewer):
                 self.receive_message()
 
         except simp.DisconnectionException:
-            self.debug(f'request_listen(): simp.DisconnectionException')
+            self.debug(f'request_listen(): simp.DisconnectionException', 2)
             pass
 
         except Exception as exc:
@@ -332,10 +437,15 @@ class OpenSpaceDataViewer(DataViewer):
             self.disconnect_from_openspace()
 
     def read_socket(self):
+        self.debug(f'Executing read_socket()', 4)
         try:
-            message_received = self._socket.recv(4096).decode('ascii')
-        except:
-            self.log("Could not receive message. Disconnecting from OpenSpace...")
+            # message_received = bytearray() + self._socket.recv(4096)
+            message_received = self._socket.recv(4096)
+            self.debug(f'message_received={message_received}', 1)
+        except socket.error as err:
+            self.log('Could not receive message.')
+            self.log(f'Socket error: {err}')
+            self.log('Disconnecting from OpenSpace...')
             raise simp.DisconnectionException
 
         if len(message_received) < 1:
@@ -346,12 +456,14 @@ class OpenSpaceDataViewer(DataViewer):
 
     # Connection handshake to ensure connection is established
     def receive_handshake(self):
-        self.debug(f'Executing receive_handshake()')
+        self.debug(f'Executing receive_handshake()', 4)
         message_received = self.read_socket()
-
+        mr_str = message_received.decode('utf-8')
+        self.debug(f'message_received={mr_str}', 1)
+        
         message_type, _ = simp.parse_message(self, message_received)
 
-        if message_type != simp.SIMPMessageType.Connection:
+        if message_type != simp.MessageType.Connection:
             return
 
         self.set_connection_state(self.ConnectionState.Connected)
@@ -361,20 +473,28 @@ class OpenSpaceDataViewer(DataViewer):
         for layer in self.layers:
             layer.update(force=True)
 
+        self.start_outgoing_data_message_thread()
+
     def receive_message(self):
-        self.debug(f'Executing receive_message()')
+        self.debug(f'Executing receive_message()', 4)
         message_received = self.read_socket()
 
         message_type, subject = simp.parse_message(self, message_received)
 
         self.log(f'Received new message: "{message_type}"')
 
-        if message_type == simp.SIMPMessageType.Disconnection:
-            raise simp.DisconnectionException
+        if message_type == simp.MessageType.Connection:
+            # We only want to parse "DATA"-messages
+            self.log('Recieved non-interesting message')
+            return
 
         try:
             offset = 0
+            # Get identifier for the "DATA"-message
             identifier, offset = simp.read_string(subject, offset)
+            # Get gui_name for the "DATA"-message
+            # Not used right now, although sent with every "DATA"-message
+            gui_name, offset = simp.read_string(subject, offset)
 
             for layer in self.layers:
                 if layer.get_identifier_str() == identifier:
@@ -386,7 +506,7 @@ class OpenSpaceDataViewer(DataViewer):
 
     @messagebox_on_error('An error occurred when trying to reset socket:', sep=' ')
     def reset_socket(self):
-        self.debug(f'Executing reset_socket()')
+        self.debug(f'Executing reset_socket()', 4)
         try:
             ip = self.ip_textfield.text().lower()
             if len(ip) < 8:
@@ -407,9 +527,12 @@ class OpenSpaceDataViewer(DataViewer):
                 raise simp.SimpError(f'The IP address {ip} is invalid')
 
 
-            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM,socket.IPPROTO_TCP)
+            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
             self._socket.settimeout(0.0)
+            self.debug(f'Trying to create connection', 3)
             self._socket = socket.create_connection((ip, port if port != "" else 4700))
+            # self.debug(f'Connection created, self._socket={self._socket}')
+            self.debug(f'Connection created', 3)
         
         except simp.SimpError as ex:
             self.set_connection_state(self.ConnectionState.Disconnected)
@@ -431,21 +554,20 @@ class OpenSpaceDataViewer(DataViewer):
         self.log('Connecting to OpenSpace...')
         self.set_connection_state(self.ConnectionState.Connecting)
 
+        self.reset_socket() # Must create connection before starting thread to recevie messages
         self.start_socket_thread()
-        self.reset_socket()
 
         # Send "Connection" message to OpenSpace
-        subject = 'Glue' + simp.SEP
-        # subject = 'Glue' + simp.SEP + self.state._software_identifier + simp.SEP
-        simp.send_simp_message(self, simp.SIMPMessageType.Connection, subject)
-        self._is_connecting = True
+        subject = bytearray('Glue' + simp.DELIM, 'utf-8')
+        simp.send_simp_message(self, simp.MessageType.Connection, subject)
 
     @messagebox_on_error('An error occurred when trying to disconnect from OpenSpace:', sep=' ')
     def disconnect_from_openspace(self):
         if self._socket is None:
             return
 
-        self.debug(f'Executing disconnect_from_openspace()')
+        self.debug(f'Executing disconnect_from_openspace()', 4)
+        self.stop_outgoing_data_message_thread()
         self.stop_socket_thread()
 
         try:

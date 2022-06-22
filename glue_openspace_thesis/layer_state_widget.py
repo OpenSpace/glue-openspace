@@ -46,8 +46,6 @@ class OpenSpaceLayerStateWidget(QWidget):
         self._init_cmap_nan_modes()
 
     def _update_size_mode(self, *args):
-        # self.state.size = 10
-
         if self.state.size_mode == 'Fixed':
             self.ui.size_map_attributes.hide()
             # self.ui.size_size.show()
@@ -56,8 +54,6 @@ class OpenSpaceLayerStateWidget(QWidget):
             # self.ui.size_size.hide()
 
     def _update_color_mode(self, *args):
-        # self.state.color = '#00ff0s0'
-
         if self.state.color_mode == 'Fixed':
             self.ui.cmap_attributes.hide()
             self.ui.color_color.show()

@@ -1,7 +1,10 @@
+import time
 from typing import TYPE_CHECKING, Any, Union
+from attr import s
 from matplotlib.colors import to_hex, to_rgb
-from astropy import units
-from astropy.coordinates import SkyCoord, Distance, BaseCoordinateFrame
+from astropy.coordinates import SkyCoord
+from threading import Thread, Lock
+from astropy import units as ap_u
 
 from glue.core import Data, Subset
 from glue.viewers.common.layer_artist import LayerArtist
@@ -10,51 +13,9 @@ import numpy as np
 from .layer_state import OpenSpaceLayerState
 from .viewer_state import OpenSpaceViewerState
 from .simp import simp
-from .utils import (
-    get_normalized_list_of_equal_strides, float_to_hex,
-    filter_lon_lat, filter_cartesian
-)
+from .utils import bool_to_bytes, float32_list_to_bytes, get_normalized_list_of_equal_strides, float32_to_bytes, int32_to_bytes
 
 __all__ = ['OpenSpaceLayerArtist']
-
-POINT_DATA_PROPERTIES = set([
-    "x_att",
-    "y_att",
-    "z_att",
-    "cartesian_unit_att",
-    "lon_att",
-    "lat_att",
-    "lum_att",
-    "vel_att",
-    "alt_att",
-    "alt_unit"
-])
-
-VELOCITY_DATA_PROPERTIES = set([
-    "velocity_mode",
-    "u_att",
-    "v_att",
-    "w_att",
-    "vel_distance_unit_att",
-    "vel_time_unit_att",
-    # "vel_norm",
-    # "speed_att",
-    # TODO: These NaN props 
-    # probably need a message
-    # of their own. We don't 
-    # want to send all the 
-    # velocity data on every 
-    # mode/color change
-    "vel_nan_mode"
-])
-
-FIXED_COLOR_PROPERTIES = set(['color_mode', 'color'])
-CMAP_PROPERTIES = set(['color_mode', 'cmap_vmin', 'cmap_vmax', 'cmap', 'cmap_nan_mode', 'cmap_nan_color'])
-CMAP_ATTR_PROPERTIES = set(['color_mode', 'cmap_att'])
-
-FIXED_SIZE_PROPERTIES = set(['size_mode', 'size'])
-SIZE_PROPERTIES = set(['size_mode', 'size', 'size_vmin', 'size_vmax'])
-SIZE_ATTR_PROPERTIES = set(['size_mode', 'size_att'])
 
 class OpenSpaceLayerArtist(LayerArtist):
     _layer_state_cls = OpenSpaceLayerState
@@ -85,6 +46,53 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         self.has_updated_points = False
 
+    def add_to_outgoing_data_message(self, data_key: simp.DataKey, entry: tuple[bytearray, int]):
+        '''
+            DANGER! You need to lock outgoing message
+            mutex before calling this function
+        '''
+        self._viewer.debug(f'Executing add_to_outgoing_data_message()', 4)
+        identifier = self.get_identifier_str()
+        if not identifier:
+            return
+
+        if not identifier in self._viewer._outgoing_data_message:
+            self._viewer._outgoing_data_message[identifier] = {}
+
+        self._viewer._outgoing_data_message[identifier][data_key] = entry
+
+    def update(self, **kwargs):
+        self._viewer.debug(f'Executing update()', 4)
+        # Check if connected
+        if self._viewer._connection_state != self._viewer.ConnectionState.Connected:
+            return
+        # if isinstance(self.state.layer, Data) or isinstance(self.state.layer, Subset):
+        #     self._viewer.check_and_add_instance(self.state.layer)
+        self._viewer.debug(f'\tConnected, we can update', 4)
+
+        force = kwargs.get('force', False)
+        try:
+            if self.get_identifier_str() is None:
+                gui_name = self.get_gui_name_str()
+                if gui_name is None:
+                    raise simp.SimpError('Cannot set GUI name')
+
+        except simp.SimpError as exc:
+            self._viewer.log(f'Exception in update: {exc.message}')
+            return
+
+        except Exception as exc:
+            self._viewer.log(f'Exception in update: {exc}')
+            return
+
+        if self._viewer._socket is None:
+            return
+
+        if self.state.has_sent_initial_data:
+            self._on_attribute_change(force)
+        else:
+            self.add_initial_data_to_message()
+
     def _on_attribute_change(self, force):
         changed = self.pop_changed_properties()
 
@@ -102,282 +110,338 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
 
         if self._viewer_state.coordinate_system != 'Cartesian'\
-        and (self._viewer_state.lon_att is None or self._viewer_state.lat_att is None):
+        and (self._viewer_state.lon_att is None or self._viewer_state.lat_att is None\
+        or self._viewer_state.alt_att is None):
             return
         
         # If properties update in Glue, send message to OpenSpace with new values
         if self.state.will_send_message is False:
             return
 
-        point_data_changed = any(prop in changed for prop in POINT_DATA_PROPERTIES)
-        velocity_data_changed = any(prop in changed for prop in VELOCITY_DATA_PROPERTIES) and self._viewer_state.velocity_mode == 'Motion'
-
-        has_changed_fixed_color = any(prop in changed for prop in FIXED_COLOR_PROPERTIES) and self.state.color_mode == 'Fixed'
-        has_changed_colormap = any(prop in changed for prop in CMAP_PROPERTIES) and self.state.color_mode == 'Linear'
-        has_changed_colormap_att = any(prop in changed for prop in CMAP_ATTR_PROPERTIES) and self.state.color_mode == 'Linear'
-
-        has_changed_fixed_size = any(prop in changed for prop in FIXED_SIZE_PROPERTIES) and self.state.size_mode == 'Fixed'
-        has_changed_linear_size = any(prop in changed for prop in SIZE_PROPERTIES) and self.state.size_mode == 'Linear'
-        has_changed_linear_size_att = any(prop in changed for prop in SIZE_ATTR_PROPERTIES) and self.state.size_mode == 'Linear'
-
+        self._viewer._outgoing_data_message_mutex.acquire()
+        self._viewer._outgoing_data_message_condition.acquire()
 
         if 'alpha' in changed:
-            self.send_opacity()
-
-        if has_changed_fixed_color:
-            self.send_fixed_color()
-
-        if has_changed_colormap:
-            self.send_colormap()
-
-        if has_changed_colormap_att:
-            self.send_colormap_attrib_data()
-
-        if has_changed_fixed_size:
-            self.send_fixed_size()
-            
-        if has_changed_linear_size:
-            self.send_linear_size()
-
-        if has_changed_linear_size_att:
-            self.send_linear_size_attrib_data()
+            self.add_to_outgoing_data_message(simp.DataKey.Alpha, self.get_opacity())
 
         if 'visible' in changed:
-            self.send_visibility()
+            self.add_to_outgoing_data_message(
+                simp.DataKey.Visibility,
+                self.is_enabled(simp.DataKey.Visibility)
+            )
 
-        if point_data_changed:
-            self.send_point_data()
+        self.add_color_to_outgoing_data_message(changed=changed)
 
-            if self.has_updated_points:
-                self.send_colormap_attrib_data()
-                self.has_updated_points = False
+        self.add_size_to_outgoing_data_message(changed=changed)
 
-        if velocity_data_changed:
-            self.send_velocity_data()
-        
+        self.add_points_to_outgoing_data_message(changed=changed)
 
-        # # On reselect of subset data, remove old scene graph node and resend data
-        # if isinstance(self.state.layer, Subset):
-        #     state = self.state.layer.subset_state
-        #     if state is not self._state:
-        #         self._state = state
-        #         # self.send_remove_sgn() # Should not be needed anymore
-        #         self.send_point_data()
-        #         self.redraw()
-        #     return
+        self.add_velocity_to_outgoing_data_message(changed=changed)
 
-        # # Store state of subset to track changes from reselection of subset
-        # if isinstance(self.state.layer, Subset):
-        #     self._state = self.state.layer.subset_state
+        self._viewer._outgoing_data_message_condition.notify()
 
-        # Send the correct message to OpenSpace
-        # if send_update_message:
-        #     simp.send_simp_message(self._viewer, message_type, subject)
-        # else:
-        #     self.send_point_data()
+        self._viewer._outgoing_data_message_mutex.release()
+        self._viewer._outgoing_data_message_condition.release()
 
         self.redraw()
 
     def _clean_properties(self, changed):
-        if "alpha" in changed:
+        if 'alpha' in changed:
             if self.state.alpha > 1.0:
                 self.state.alpha = 1.0
             elif self.state.alpha < 0.0:
                 self.state.alpha = 0.0
 
-        elif "size" in changed:
+        elif 'size' in changed:
             if self.state.size > 500.0:
                 self.state.size = 500.0
             elif self.state.size < 0.0:
                 self.state.size = 0.0
 
-    def receive_message(self, message_type: simp.SIMPMessageType, subject: str, offset: int):
-        # Update Color
-        if message_type == simp.SIMPMessageType.Color:
-            color, offset = simp.read_color(subject, offset)
-            color_value = to_hex(color, keep_alpha=False)
+    def receive_message(self, subject: bytearray, offset: int):
+        self.state.will_send_message = False
 
-            self.state.will_send_message = False
-            self.state.color = color_value
-
-        # Update Opacity
-        elif message_type == simp.SIMPMessageType.Opacity:
-            opacity_value, offset = simp.read_float(subject, offset)
-
-            self.state.will_send_message = False
-            self.state.alpha = opacity_value
-
-        # Update Size
-        elif message_type == simp.SIMPMessageType.FixedSize:
-            size_value, offset = simp.read_float(subject, offset)
+        color = to_rgb(self.state.color)
+        new_color = color
+        
+        while offset != len(subject):
+            simp.check_offset(subject, offset)
+            data_key, offset = simp.read_string(subject, offset)
             
-            self.state.will_send_message = False
-            self.state.size = size_value
+            # Update Color
+            if data_key == simp.DataKey.Red:
+                new_color[0], offset = simp.read_float32(subject, offset)
+            elif data_key == simp.DataKey.Green:
+                new_color[1], offset = simp.read_float32(subject, offset)
+            elif data_key == simp.DataKey.Blue:
+                new_color[2], offset = simp.read_float32(subject, offset)
+            elif data_key == simp.DataKey.Alpha:    
+                self.state.alpha, offset = simp.read_float32(subject, offset)
+            
+            # Update Colormap Enabled
+            elif data_key == simp.DataKey.ColormapEnabled:
+                colormap_enable, offset = simp.read_bool(subject, offset)
+                if colormap_enable:
+                    self.state.color_mode = 'Linear'
+                else:
+                    self.state.color_mode = 'Fixed'
 
-        # Toggle Visibility
-        elif message_type == simp.SIMPMessageType.Visibility:
-            visibility_value, offset = simp.read_string(subject, offset)
-            self.state.will_send_message = False
+            # Update Colormap NaN Mode
+            elif data_key == simp.DataKey.ColormapNanMode:
+                # TODO: change to int instead of string
+                self.state.cmap_nan_mode, offset = simp.read_string(subject, offset)
 
-            self.state.visible = visibility_value == "T"
+            # Update Size
+            elif data_key == simp.DataKey.FixedSize:
+                self.state.size, offset = simp.read_float32(subject, offset)
+            
+            # Update Linear Size Enabled
+            elif data_key == simp.DataKey.ColormapEnabled:
+                # TODO: change to bool instead of string
+                self.state.size_mode, offset = simp.read_string(subject, offset)
 
-        # Change Colormap
-        elif message_type == simp.SIMPMessageType.ColorMap:
-            v_min, offset = simp.read_float(subject, offset)
-            v_max, offset = simp.read_float(subject, offset)
+            # Update Velocity Enabled
+            elif data_key == simp.DataKey.VelocityEnabled:                
+                velocity_enable, offset = simp.read_bool(subject, offset)
+                if velocity_enable:
+                    self._viewer_state.velocity_mode = 'Motion'
+                else:
+                    self._viewer_state.velocity_mode = 'Static'
+            
+            # Update Velocity NaN Mode
+            elif data_key == simp.DataKey.VelocityNanMode:
+                # TODO: change to int instead of string
+                self._viewer_state.vel_nan_mode, offset = simp.read_string(subject, offset)
+            
+            # Toggle Visibility
+            elif data_key == simp.DataKey.Visibility:
+                self.state.visible, offset = simp.read_bool(subject, offset)
+ 
+            else:
+                raise simp.SimpError(
+                    f'SIMP or the Glue-OpenSpace plugin doesn\'t '\
+                    + f'support the attribute \'{data_key}\'.'
+                )
 
-            self.state.cmap_vmin = v_min
-            self.state.cmap_vmax = v_max
-            # self.state.will_send_message = False
+        if new_color[0] != color[0] or new_color[1] != color[1] or new_color[2] != color[2]:
+            self.state.color = to_hex(new_color, keep_alpha=False)
 
         self.state.will_send_message = True
         self.redraw()
 
-    def send_opacity(self):
-        subject = self.get_subject_prefix() + self.get_opacity_str() + simp.SEP
-        simp.send_simp_message(self._viewer, simp.SIMPMessageType.Opacity, subject)
+    def add_points_to_outgoing_data_message(self, *, changed: set = {}, force: bool = False):
+        '''
+            Adds all point data to outgoing message if force is true.
+            Else, check which properties has changed and add 
+            relevant data to outgoing message.
+        '''
+        self._viewer.debug(f'Executing add_points_to_outgoing_data_message()', 4)
+        coord_sys_changed = 'coordinate_system' in changed
+        
 
-    def send_fixed_color(self):
-        subject = self.get_subject_prefix() + self.get_color_str() + simp.SEP
-        simp.send_simp_message(self._viewer, simp.SIMPMessageType.Color, subject)
-
-    def send_colormap(self):
-        vmin_str, vmax_str = self.get_colormap_limits_str()
-        colormap_str, n_colors_str = self.get_colormap_str()
-        cmap_nan_color = list(
-            to_rgb(self.state.cmap_nan_color 
-                    if (self.state.cmap_nan_color != None) 
-                    else [0.0,1.0,0.0,1.0])
+        has_changed_anything_in_icrs = (
+            any([attr in changed for attr in ['lon_att', 'lat_att', 'alt_att']])
+            and self._viewer_state.coordinate_system == 'ICRS'
         )
-        cmap_nan_color_str = self.get_color_str(cmap_nan_color) + simp.SEP if self.state.cmap_nan_mode == 'FixedColor' else ''
 
-        subject = (
-            self.get_subject_prefix() +
-            vmin_str + simp.SEP +
-            vmax_str + simp.SEP +
-            self.state.cmap_nan_mode + simp.SEP +
-            cmap_nan_color_str + 
-            n_colors_str + simp.SEP +
-            colormap_str + simp.SEP
-        )
-        simp.send_simp_message(self._viewer, simp.SIMPMessageType.ColorMap, subject)
+        # TODO: ADD RA,Dec and Dist to simp
 
-    def send_colormap_attrib_data(self):
-        colormap_attrib_data_str, n_attrib_data_str = self.get_attrib_data_str(self.state.cmap_att)
-        subject = (
-            self.get_subject_prefix() +
-            "ColormapAttributeData" + simp.SEP +
-            n_attrib_data_str + simp.SEP +
-            colormap_attrib_data_str + simp.SEP
-        )
-        simp.send_simp_message(self._viewer, simp.SIMPMessageType.AttributeData, subject)
-
-    def send_fixed_size(self):
-        subject = self.get_subject_prefix() + self.get_size_str() + simp.SEP
-        simp.send_simp_message(self._viewer, simp.SIMPMessageType.FixedSize, subject)
-
-    def send_linear_size(self):
-        vmin_str, vmax_str = self.get_linear_size_limits_str()
-
-        subject = (
-            self.get_subject_prefix() +
-            self.get_size_str() + simp.SEP +
-            vmin_str + simp.SEP +
-            vmax_str + simp.SEP
-        )
-        simp.send_simp_message(self._viewer, simp.SIMPMessageType.LinearSize, subject)
-
-    def send_linear_size_attrib_data(self):
-        linear_size_attrib_data_str, n_attrib_data_str = self.get_attrib_data_str(self.state.size_att)
-        subject = (
-            self.get_subject_prefix() +
-            "LinearSizeAttributeData" + simp.SEP +
-            n_attrib_data_str + simp.SEP +
-            linear_size_attrib_data_str + simp.SEP
-        )
-        simp.send_simp_message(self._viewer, simp.SIMPMessageType.AttributeData, subject)
-
-    def send_visibility(self):
-        visible_str = 'T' if self.state.visible else 'F'
-        subject = self.get_subject_prefix() + visible_str + simp.SEP
-        simp.send_simp_message(self._viewer, simp.SIMPMessageType.Visibility, subject)
-
-    # Create and send a message including the point data to OpenSpace
-    def send_point_data(self):
-        # Create string with coordinates for point data
-        try:
-            point_data_str, n_points_str = self.get_coordinates_str()
-            self._viewer.log(f'Sending {n_points_str} points to OpenSpace')
-            subject = (
-                self.get_subject_prefix() +
-                n_points_str + simp.SEP +
-                str(3) + simp.SEP +
-                point_data_str + simp.SEP
+        if force or coord_sys_changed or 'x_att' in changed or has_changed_anything_in_icrs:
+            self.add_to_outgoing_data_message(
+                simp.DataKey.X,
+                self.get_float_attribute(self.state.layer[self._viewer_state.x_att])
             )
-            simp.send_simp_message(self._viewer, simp.SIMPMessageType.PointData, subject)
+        if force or coord_sys_changed or 'y_att' in changed or has_changed_anything_in_icrs:
+            self.add_to_outgoing_data_message(
+                simp.DataKey.Y,
+                self.get_float_attribute(self.state.layer[self._viewer_state.y_att])
+            )
+        if force or coord_sys_changed or 'z_att' in changed or has_changed_anything_in_icrs:
+            self.add_to_outgoing_data_message(
+                simp.DataKey.Z,
+                self.get_float_attribute(self.state.layer[self._viewer_state.z_att])
+            )
 
-        except Exception as exc:
-            self._viewer.log(f'Exception in send_point_data: {str(exc)}')
+        if force or "cartesian_unit_att" in changed\
+                 or "alt_unit" in changed or coord_sys_changed:
+            self.add_to_outgoing_data_message(simp.DataKey.PointUnit, (self.get_position_unit(), 1))
 
-    def send_velocity_data(self):
-        # Create string with coordinates for velocity data
-        try:
-            velocity_dist_unit, velocity_time_unit, \
-            velocity_data_str, n_points_str = self.get_velocity_str()
-            self._viewer.log(f'Sending velocity data for {n_points_str} points to OpenSpace')
+    def add_velocity_to_outgoing_data_message(self, *, changed: set = {}, force: bool = False):
+        '''
+            Adds all velocity data to outgoing message if force is true.
+            Else, check which properties has changed and add 
+            relevant data to outgoing message.
+        '''
+        self._viewer.debug(f'Executing add_velocity_to_outgoing_data_message()', 4)
+        if self._viewer_state.velocity_mode != 'Motion':
+            return
+
+        # If in motion mode, check which velocity data to send
+
+        velocity_mode_changed = 'velocity_mode' in changed
+        
+        # TODO: if force, get all velocity data (faster?)
+
+        if force or "u_att" in changed or velocity_mode_changed:
+            self.add_to_outgoing_data_message(
+                simp.DataKey.U,
+                self.get_float_attribute(self.state.layer[self._viewer_state.u_att])
+            )
+        if force or "v_att" in changed or velocity_mode_changed:
+            self.add_to_outgoing_data_message(
+                simp.DataKey.V,
+                self.get_float_attribute(self.state.layer[self._viewer_state.v_att])
+            )
+        if force or "w_att" in changed or velocity_mode_changed:
+            self.add_to_outgoing_data_message(
+                simp.DataKey.W,
+                self.get_float_attribute(self.state.layer[self._viewer_state.w_att])
+            )
+        if force or "vel_distance_unit_att" in changed or velocity_mode_changed:
+            self.add_to_outgoing_data_message(simp.DataKey.VelocityDistanceUnit, self.get_velocity_distance_unit())
+        if force or "vel_time_unit_att" in changed or velocity_mode_changed:
+            self.add_to_outgoing_data_message(simp.DataKey.VelocityTimeUnit, self.get_velocity_time_unit())
+        if force or "vel_nan_mode" in changed or velocity_mode_changed:
+            self.add_to_outgoing_data_message(simp.DataKey.VelocityNanMode, self.get_velocity_nan_mode())
+        # if "vel_norm" in changed:
+        # if "speed_att" in changed:
+        if force or velocity_mode_changed:
+            self.add_to_outgoing_data_message(
+                simp.DataKey.VelocityEnabled,
+                self.is_enabled(simp.DataKey.VelocityEnabled)
+            )
+
+        return
+
+    def add_color_to_outgoing_data_message(self, *, changed: set = {}, force: bool = False):
+        '''
+            Adds all color data to outgoing message if force is true.
+            Else, check which properties has changed and add 
+            relevant data to outgoing message.
+        '''
+        self._viewer.debug(f'Executing add_color_to_outgoing_data_message()', 4)
+        color_mode_changed = 'color_mode' in changed
+
+        if force or 'color' in changed or (color_mode_changed and self.state.color_mode == 'Fixed'):
+            (r, g, b, _) = self.get_color()
+            self.add_to_outgoing_data_message(simp.DataKey.Red, (r, 1))
+            self.add_to_outgoing_data_message(simp.DataKey.Green, (g, 1))
+            self.add_to_outgoing_data_message(simp.DataKey.Blue, (b, 1))
+        
+        if self.state.color_mode == 'Linear':
+            if force or 'cmap_nan_mode' in changed or color_mode_changed:
+                self.add_to_outgoing_data_message(
+                    simp.DataKey.ColormapNanMode,
+                    self.get_cmap_nan_mode()
+                )
             
-            subject = (
-                self.get_subject_prefix() +
-                velocity_dist_unit + simp.SEP +
-                velocity_time_unit + simp.SEP +
-                self._viewer_state.vel_nan_mode + simp.SEP +
-                n_points_str + simp.SEP +
-                str(3) + simp.SEP +
-                velocity_data_str + simp.SEP
-            )            
-            simp.send_simp_message(self._viewer, simp.SIMPMessageType.VelocityData, subject)
+            if (force or 'cmap_nan_color' in changed or color_mode_changed)\
+                and self.state.cmap_nan_mode == 'FixedColor':
+                (r, g, b, a) = self.get_cmap_nan_color()
+                self.add_to_outgoing_data_message(simp.DataKey.ColormapNanR, (r, 1))
+                self.add_to_outgoing_data_message(simp.DataKey.ColormapNanG, (g, 1))
+                self.add_to_outgoing_data_message(simp.DataKey.ColormapNanB, (b, 1))
+                self.add_to_outgoing_data_message(simp.DataKey.ColormapNanA, (a, 1))
 
-        except Exception as exc:
-            self._viewer.log(f'Exception in send_velocity_data: {str(exc)}')
+            min, max = self.get_colormap_limits()
+            if force or 'cmap_vmin' in changed or color_mode_changed:
+                self.add_to_outgoing_data_message(simp.DataKey.ColormapMin, (min, 1))
+            if force or 'cmap_vmax' in changed or color_mode_changed:
+                self.add_to_outgoing_data_message(simp.DataKey.ColormapMax, (max, 1))
+
+            if force or 'cmap' in changed or color_mode_changed:
+                (r, g, b, a, n_colors) = self.get_colormap()
+                self.add_to_outgoing_data_message(simp.DataKey.ColormapRed, (r, n_colors))
+                self.add_to_outgoing_data_message(simp.DataKey.ColormapGreen, (g, n_colors))
+                self.add_to_outgoing_data_message(simp.DataKey.ColormapBlue, (b, n_colors))
+                self.add_to_outgoing_data_message(simp.DataKey.ColormapAlpha, (a, n_colors))
+
+            if force or 'cmap_att' in changed or color_mode_changed:
+                self.add_to_outgoing_data_message(
+                    simp.DataKey.ColormapAttributeData,
+                    self.get_attrib_data(self.state.cmap_att)
+                )
+            
+        if force or color_mode_changed:
+            self.add_to_outgoing_data_message(
+                simp.DataKey.ColormapEnabled,
+                self.is_enabled(simp.DataKey.ColormapEnabled)
+            )
+            
+        return
+
+    def add_size_to_outgoing_data_message(self, *, changed: set = {}, force: bool = False):
+        '''
+            Adds all size data to outgoing message if force is true.
+            Else, check which properties has changed and add 
+            relevant data to outgoing message.
+        '''
+        self._viewer.debug(f'Executing add_size_to_outgoing_data_message()', 4)
+        size_mode_changed = 'size_mode' in changed
+        if force or 'size' in changed or (size_mode_changed and self.state.size_mode == 'Fixed'):
+            self.add_to_outgoing_data_message(simp.DataKey.FixedSize, self.get_size())
+
+        if self.state.size_mode == 'Linear':
+            min, max = self.get_linear_size_limits()
+            if force or 'size_att' in changed or size_mode_changed:
+                self.add_to_outgoing_data_message(
+                    simp.DataKey.LinearSizeAttributeData,
+                    self.get_attrib_data(self.state.size_att)
+                )
+            if force or 'size_vmin' in changed or size_mode_changed:
+                self.add_to_outgoing_data_message(simp.DataKey.LinearSizeMin, min)
+            if force or 'size_vmax' in changed or size_mode_changed:
+                self.add_to_outgoing_data_message(simp.DataKey.LinearSizeMax, max)
+        
+        if force or size_mode_changed:
+            self.add_to_outgoing_data_message(
+                simp.DataKey.LinearSizeEnabled,
+                self.is_enabled(simp.DataKey.LinearSizeEnabled)
+            )
 
     def get_subject_prefix(self) -> str:
         identifier = self.get_identifier_str()
         gui_name = self.get_gui_name_str()
-        return identifier + simp.SEP + gui_name + simp.SEP
+        return identifier + simp.DELIM + gui_name + simp.DELIM
 
-    def send_initial_data(self):
-        self.send_point_data()
-        self.send_opacity()
-        self.send_visibility()
+    def add_initial_data_to_message(self):
+        self._viewer._outgoing_data_message_mutex.acquire()
+        self._viewer._outgoing_data_message_condition.acquire()
 
-        if self.state.color_mode == 'Linear':
-            # If in color map mode, send color map messages
-            self.send_colormap()
-            self.send_colormap_attrib_data()
-        else:
-            self.send_fixed_color()
+        self._viewer.debug(f'Executing add_initial_data_to_message()', 4)
 
-        if self.state.size_mode == 'Linear':
-            # If in color map mode, send color map messages
-            self.send_linear_size()
-            self.send_linear_size_attrib_data()
-        else:
-            self.send_fixed_size()
+        # PointData
+        self.add_points_to_outgoing_data_message(force=True)
 
-        if self._viewer_state.velocity_mode == 'Motion':
-            # If in motion mode, send velocity data
-            self.send_velocity_data()
-
-        self.state.has_sent_initial_data = True
-        self.pop_changed_properties()
-
+        # Opacity
+        self.add_to_outgoing_data_message(simp.DataKey.Alpha, self.get_opacity())
         
+        # Visibility
+        self.add_to_outgoing_data_message(
+            simp.DataKey.Visibility,
+            self.is_enabled(simp.DataKey.Visibility)
+        )
+
+        # Color
+        self.add_color_to_outgoing_data_message(force=True)
+
+        # Size
+        self.add_size_to_outgoing_data_message(force=True)
+
+        # Velocity
+        self.add_velocity_to_outgoing_data_message(force=True)
+        
+        self._viewer._outgoing_data_message_condition.notify()
+
+        self._viewer._outgoing_data_message_mutex.release()
+        self._viewer._outgoing_data_message_condition.release()
+
+        self.pop_changed_properties()
 
     # Create and send "Remove Scene Graph Node" message to OS
     def send_remove_sgn(self):
-        message_type = simp.SIMPMessageType.RemoveSceneGraphNode
-        subject = self.get_identifier_str() + simp.SEP
-        simp.send_simp_message(self._viewer, message_type, subject)
+        subject = bytearray(self.get_identifier_str() + simp.DELIM, 'utf-8')
+        simp.send_simp_message(self._viewer, simp.MessageType.RemoveSceneGraphNode, subject)
 
     def clear(self):
         if self._viewer._socket is None:
@@ -385,33 +449,6 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         self.send_remove_sgn()
         self.redraw()
-
-    def update(self, **kwargs):
-        # if isinstance(self.state.layer, Data) or isinstance(self.state.layer, Subset):
-        #     self._viewer.check_and_add_instance(self.state.layer)
-
-        force = kwargs.get('force', False)
-        try:
-            if self.get_identifier_str() is None:
-                gui_name = self.get_gui_name_str()
-                if gui_name is None:
-                    raise simp.SimpError("Cannot set GUI name")
-
-        except simp.SimpError as exc:
-            self._viewer.log(f'Exception in update: {exc.message}')
-            return
-
-        except Exception as exc:
-            self._viewer.log(f'Exception in update: {exc}')
-            return
-
-        if self._viewer._socket is None:
-            return
-
-        if self.state.has_sent_initial_data:
-            self._on_attribute_change(force)
-        else:
-            self.send_initial_data()
 
     def get_identifier_str(self) -> Union[str, None]:
         # self.state.has_sent_initial_data = False
@@ -429,7 +466,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         else:
             return
 
-    def get_color_str(self, color=None) -> str:
+    def get_color(self, color=None) -> tuple[bytearray, bytearray, bytearray, bytearray]:
         """
         `color` should be [r, g, b] or [r, g, b, a].
         If `color` isn't specified, self.state.color 
@@ -443,16 +480,34 @@ class OpenSpaceLayerArtist(LayerArtist):
                 self._viewer.log('The provided color is not of type list...')
                 return
 
-        r = float_to_hex(color[0])
-        g = float_to_hex(color[1])
-        b = float_to_hex(color[2])
-        a = float_to_hex(color[3] if (len(color) == 4) else 1.0)
+        r = float32_to_bytes(color[0])
+        g = float32_to_bytes(color[1])
+        b = float32_to_bytes(color[2])
+        a = float32_to_bytes(color[3] if (len(color) == 4) else 1.0)
 
-        return '[' + r + simp.SEP + g + simp.SEP + b + simp.SEP + a + simp.SEP + ']'
+        return (r, g, b, a)
 
-    def get_opacity_str(self) -> str:
-        opacity = float_to_hex(self.state.alpha)
-        return opacity
+    def is_enabled(self, mode: simp.DataKey) -> tuple[bytearray, int]:
+        self._viewer.debug(f'Executing is_enabled()')
+        if mode == simp.DataKey.Visibility:
+            return bool_to_bytes(bool(self.state.visible)), 1
+        elif mode == simp.DataKey.VelocityEnabled:
+            enabled = True if self._viewer_state.velocity_mode == 'Motion' else False
+            return bool_to_bytes(bool(enabled)), 1
+        elif mode == simp.DataKey.ColormapEnabled:
+            enabled = True if self.state.color_mode == 'Linear' else False
+            return bool_to_bytes(bool(enabled)), 1
+        elif mode == simp.DataKey.LinearSizeEnabled:
+            enabled = True if self.state.size_mode == 'Linear' else False
+            return bool_to_bytes(bool(enabled)), 1
+        else:
+            raise simp.SimpError(
+                f'The data key \'{mode}\' can\'t be used to set enable/disable'
+            )
+
+    def get_opacity(self) -> tuple[bytearray, int]:
+        self._viewer.debug(f'Executing get_opacity()', 4)
+        return float32_to_bytes(self.state.alpha), 1
 
     def get_gui_name_str(self) -> Union[str, None]:
         if isinstance(self.state.layer, Data):
@@ -467,133 +522,122 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         # Escape all potential occurences of the separator character inside the gui name
         for i in range(len(gui_name)):
-            if (gui_name[i] == simp.SEP):
+            if (gui_name[i] == simp.DELIM):
                 clean_gui_name += '\\'
             clean_gui_name += gui_name[i]
 
         return clean_gui_name
         
-    def get_size_str(self) -> str:
-        size = float_to_hex(self.state.size)
-        return size
+    def get_size(self) -> tuple[bytearray, int]:
+        return (float32_to_bytes(float(self.state.size)), 1)
 
-    def get_linear_size_limits_str(self) -> tuple[str, str]:
-        vmin = float_to_hex(float(self.state.size_vmin))
-        vmax = float_to_hex(float(self.state.size_vmax))
+    def get_linear_size_limits(self) -> tuple[tuple[bytearray, int], tuple[bytearray, int]]:
+        vmin = (float32_to_bytes(float(self.state.size_vmin)), 1)
+        vmax = (float32_to_bytes(float(self.state.size_vmax)), 1)
         return vmin, vmax
 
-    def get_coordinates_str(self) -> tuple[str, str]:
-        if self._viewer_state.coordinate_system == 'Cartesian':
-            self.has_updated_points = True
-            x, y, z, self._removed_indices = filter_cartesian(
-                self.state.layer[self._viewer_state.x_att],
-                self.state.layer[self._viewer_state.y_att],
-                self.state.layer[self._viewer_state.z_att]
+    def get_position_unit(self) -> tuple[bytearray]:
+        if self._viewer_state.coordinate_system == "Cartesian":
+            return (
+                bytearray(simp.dist_unit_astropy_to_simp(
+                    self._viewer_state.cartesian_unit_att 
+                ) + simp.DELIM, 'utf-8')
+            )
+        elif self._viewer_state.coordinate_system == "ICRS":
+            return (
+                bytearray(simp.dist_unit_astropy_to_simp(
+                    self._viewer_state.alt_unit
+                ) + simp.DELIM, 'utf-8')
             )
 
-            if self._viewer_state.cartesian_unit_att is not None and self._viewer_state.cartesian_unit_att != 'pc':
-                # Get the unit from the gui
-                unit = units.Unit(self._viewer_state.cartesian_unit_att)
-                # Convert to parsec, since that's what OpenSpace wants
-                x = (x * unit).to_value(units.pc)
-                y = (y * unit).to_value(units.pc)
-                z = (z * unit).to_value(units.pc)
+    def get_coordinates(self) -> tuple[list[bytearray], int]:
+        self._viewer.debug(f'Executing get_coordinates()', 4)
+        
+        x: list[float]
+        y: list[float]
+        z: list[float]
+        has_updated_points = False
+
+        if self._viewer_state.coordinate_system == 'Cartesian':
+            has_updated_points = True
+            x = self.state.layer[self._viewer_state.x_att]
+            y = self.state.layer[self._viewer_state.y_att]
+            z = self.state.layer[self._viewer_state.z_att]
+
+        elif self._viewer_state.coordinate_system == 'ICRS':
+            has_updated_points = True
+            # Convert ICRS to cartesian coordinates
+            coordinates = SkyCoord(
+                self.state.layer[self._viewer_state.lon_att] * ap_u.deg,
+                self.state.layer[self._viewer_state.lat_att] * ap_u.deg,
+                distance=self.state.layer[self._viewer_state.alt_att] * ap_u.Unit(self._viewer_state.alt_unit),
+                frame='icrs'
+            )
+            x, y, z = coordinates.galactic.cartesian.xyz.value
+            # unit = coordinates.galactic.cartesian.xyz.unit
             
-        else:
-            frame = self._viewer_state.coordinate_system.lower()
-            unit = units.Unit(self._viewer_state.alt_unit) # TODO: Rename to dist_unit? 
 
-            if self._viewer_state.alt_att is None or unit is None:
-                self.has_updated_points = True
-                longitude, latitude, _, self._removed_indices = filter_lon_lat(
-                    self.state.layer[self._viewer_state.lon_att],
-                    self.state.layer[self._viewer_state.lat_att]
-                )
+        if has_updated_points:
+            x_res = bytearray()
+            y_res = bytearray()
+            z_res = bytearray()
+            for i in range(len(x)):
+                x_res += float32_to_bytes(float(x[i]))
+                y_res += float32_to_bytes(float(y[i]))
+                z_res += float32_to_bytes(float(z[i]))
 
-                # Get cartesian coordinates on unit galactic sphere
-                coordinates = SkyCoord(longitude, latitude, unit='deg', frame=frame)
-                x, y, z = coordinates.galactic.cartesian.xyz
+            return [x_res, y_res, z_res], len(x)
 
-                # Convert to be on a sphere of radius 100pc
-                radius = 100 * units.pc
-                x *= radius
-                y *= radius
-                z *= radius
+    def get_cmap_nan_mode(self) -> tuple[bytearray, int]:
+        mode = -1
+        if self.state.cmap_nan_mode == 'Hidden':
+            mode = 0
+        elif self.state.cmap_nan_mode == 'FixedColor':
+            mode = 1
 
-            else:
-                self.has_updated_points = True
-                longitude, latitude, distance, self._removed_indices = filter_lon_lat(
-                    self.state.layer[self._viewer_state.lon_att],
-                    self.state.layer[self._viewer_state.lat_att],
-                    self.state.layer[self._viewer_state.alt_att]
-                )
-                
-                # Get cartesian coordinates on unit galactic sphere
-                coordinates = SkyCoord(
-                    longitude * units.deg,
-                    latitude * units.deg,
-                    distance=distance * units.Unit(unit),
-                    frame=frame
-                )
-                x, y, z = coordinates.galactic.cartesian.xyz
+        return (int32_to_bytes(mode), 1)
 
-                # print(type(x), [str(_x) for _x in x])
-
-                # Convert coordinates to parsec
-                x = x.to_value(units.pc)
-                y = y.to_value(units.pc)
-                z = z.to_value(units.pc)
-
-        coordinates_string = ''
-        n_points_str = str(len(x))
-
-        for i in range(len(x)):
-            coordinates_string += "["\
-                + float_to_hex(float(x[i])) + simp.SEP\
-                + float_to_hex(float(y[i])) + simp.SEP\
-                + float_to_hex(float(z[i])) + simp.SEP + "]"
-
-        return coordinates_string, n_points_str
-    
-    def get_velocity_str(self) -> tuple[str, str, str]:
-        u_att = self.state.layer[self._viewer_state.u_att]
-        v_att = self.state.layer[self._viewer_state.v_att]
-        w_att = self.state.layer[self._viewer_state.w_att]
-
-        # Fail safe! u, v, w should all be the same length
-        min_len_uvw = min(len(u_att), len(v_att), len(w_att))
-        max_len_uvw = max(len(u_att), len(v_att), len(w_att))
-        u, v, w = [], [], []
-        for i in range(0, max_len_uvw):
-            if i in self._removed_indices:
-                continue
-            if i > min_len_uvw:
-                break
-            u.append(u_att[i])
-            v.append(v_att[i])
-            w.append(w_att[i])
-        u, v, w = np.array(u), np.array(v), np.array(w)
-
-        # TODO: Unnormalize if normalized?
-
-        velocity_dist_unit = simp.dist_unit_astropy_to_simp(
-            self._viewer_state.vel_distance_unit_att
-        )
-        velocity_time_unit = simp.time_unit_astropy_to_simp(
-            self._viewer_state.vel_time_unit_att
+    def get_cmap_nan_color(self) -> tuple[bytearray, bytearray, bytearray, bytearray]:
+        return self.get_color(
+            to_rgb(
+                self.state.cmap_nan_color 
+                if (self.state.cmap_nan_color != None) 
+                else [0.0,1.0,0.0,1.0]
+            )
         )
         
-        velocity_string = ''
-        n_points_str = str(len(u))
-        for i in range(len(u)):
-            velocity_string += "["\
-                + float_to_hex(float(u[i])) + simp.SEP\
-                + float_to_hex(float(v[i])) + simp.SEP\
-                + float_to_hex(float(w[i])) + simp.SEP + "]"
+    def get_velocity_nan_mode(self) -> tuple[bytearray, int]:
+        mode = -1
+        if self._viewer_state.vel_nan_mode == 'Hidden':
+            mode = 0
+        elif self._viewer_state.vel_nan_mode == 'Static':
+            mode = 1
 
-        return velocity_dist_unit, velocity_time_unit, velocity_string, n_points_str
+        return (int32_to_bytes(mode), 1)
 
-    def get_colormap_str(self) -> tuple[str, str]:
+    def get_velocity_distance_unit(self) -> tuple[bytearray, int]:
+        return (
+            bytearray(simp.dist_unit_astropy_to_simp(
+                self._viewer_state.vel_distance_unit_att
+            ) + simp.DELIM, 'utf-8'),
+            1
+        )
+
+    def get_velocity_time_unit(self) -> tuple[bytearray, int]:
+        return (
+            bytearray(simp.time_unit_astropy_to_simp(
+                self._viewer_state.vel_time_unit_att
+            ) + simp.DELIM, 'utf-8'),
+            1
+        )
+
+    def get_float_attribute(self, attr: np.ndarray) -> tuple[bytearray, int]:
+        self._viewer.debug('Executing get_float_attribute()', 4)
+        # TODO: Unnormalize velocity if normalized?
+        attr_bytes = float32_list_to_bytes(attr.tolist())
+        return (attr_bytes, len(attr))
+
+    def get_colormap(self) -> tuple[bytearray, bytearray, bytearray, bytearray, int]:
         formatted_colormap = None
         if hasattr(self.state.cmap, 'colors'):
             formatted_colormap = [[c[0], c[1], c[2], 1.0] for c in self.state.cmap.colors]
@@ -606,25 +650,32 @@ class OpenSpaceLayerArtist(LayerArtist):
                 [ch for ch in self.state.cmap(x)] for x in samples
             ]
 
-        n_colors_str = str(len(formatted_colormap))
-        colormap_str = ''.join([self.get_color_str(color) for color in formatted_colormap])
+        r = bytearray()
+        g = bytearray()
+        b = bytearray()
+        a = bytearray()
+        for _color in formatted_colormap:
+            color = self.get_color(_color)
+            r += color[0]
+            g += color[1]
+            b += color[2]
+            a += color[3]
 
-        return colormap_str, n_colors_str
+        return (r, g, b, a, len(formatted_colormap))
 
-    def get_colormap_limits_str(self) -> tuple[str, str]:
-        vmin = float_to_hex(float(self.state.cmap_vmin))
-        vmax = float_to_hex(float(self.state.cmap_vmax))
-        return vmin, vmax
+    def get_colormap_limits(self) -> tuple[bytearray, bytearray]:
+        vmin = float32_to_bytes(float(self.state.cmap_vmin))
+        vmax = float32_to_bytes(float(self.state.cmap_vmax))
+        return (vmin, vmax)
 
-    def get_attrib_data_str(self, attribute) -> tuple[str, str]:
+    def get_attrib_data(self, attribute) -> tuple[bytearray, int]:
         attrib_data = self.state.layer[attribute]
 
-        # Filter away removed indices from list and convert to simp string
-        attrib_data = [
-            float_to_hex(float(x)) # if not np.isnan(x) else 1.0
-            for i, x in enumerate(attrib_data)
-            if i not in self._removed_indices
-        ]
+        result = bytearray()
 
-        return str(simp.SEP).join(attrib_data), str(len(attrib_data))
+        # Filter away removed indices from list and convert to simp string
+        for value in attrib_data:
+            result += float32_to_bytes(float(value))
+
+        return result, len(attrib_data)
 
