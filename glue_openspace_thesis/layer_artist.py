@@ -13,7 +13,9 @@ import numpy as np
 from .layer_state import OpenSpaceLayerState
 from .viewer_state import OpenSpaceViewerState
 from .simp import simp
-from .utils import bool_to_bytes, float32_list_to_bytes, get_normalized_list_of_equal_strides, float32_to_bytes, int32_to_bytes
+from .utils import (bool_to_bytes, float32_list_to_bytes, float32_to_bytes,
+                    int32_to_bytes, string_to_bytes,
+                    get_normalized_list_of_equal_strides) 
 
 __all__ = ['OpenSpaceLayerArtist']
 
@@ -94,7 +96,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             self.add_initial_data_to_message()
 
     def _on_attribute_change(self, force):
-        self._viewer.debug(f'Executing _on_attribute_change()')
+        self._viewer.debug(f'Executing _on_attribute_change()', 4)
         changed = self.pop_changed_properties()
 
         if len(changed) == 0 and not force:
@@ -274,38 +276,44 @@ class OpenSpaceLayerArtist(LayerArtist):
             relevant data to outgoing message.
         '''
         self._viewer.debug(f'Executing add_velocity_to_outgoing_data_message()', 4)
+
         if self._viewer_state.velocity_mode != 'Motion':
             return
 
         # If in motion mode, check which velocity data to send
-
         velocity_mode_changed = 'velocity_mode' in changed
         
         # TODO: if force, get all velocity data (faster?)
 
-        if force or "u_att" in changed or velocity_mode_changed:
+        if force or 'u_att' in changed or velocity_mode_changed:
             self.add_to_outgoing_data_message(
                 simp.DataKey.U,
                 self.get_float_attribute(self.state.layer[self._viewer_state.u_att])
             )
-        if force or "v_att" in changed or velocity_mode_changed:
+        if force or 'v_att' in changed or velocity_mode_changed:
             self.add_to_outgoing_data_message(
                 simp.DataKey.V,
                 self.get_float_attribute(self.state.layer[self._viewer_state.v_att])
             )
-        if force or "w_att" in changed or velocity_mode_changed:
+        if force or 'w_att' in changed or velocity_mode_changed:
             self.add_to_outgoing_data_message(
                 simp.DataKey.W,
                 self.get_float_attribute(self.state.layer[self._viewer_state.w_att])
             )
-        if force or "vel_distance_unit_att" in changed or velocity_mode_changed:
+        if force or 'vel_distance_unit_att' in changed or velocity_mode_changed:
             self.add_to_outgoing_data_message(simp.DataKey.VelocityDistanceUnit, self.get_velocity_distance_unit())
-        if force or "vel_time_unit_att" in changed or velocity_mode_changed:
+        if force or 'vel_time_unit_att' in changed or velocity_mode_changed:
             self.add_to_outgoing_data_message(simp.DataKey.VelocityTimeUnit, self.get_velocity_time_unit())
-        if force or "vel_nan_mode" in changed or velocity_mode_changed:
+        if force or 'vel_day_rec' in changed or velocity_mode_changed:
+            self.add_to_outgoing_data_message(simp.DataKey.VelocityDayRecorded, self.get_velocity_day_rec())
+        if force or 'vel_month_rec' in changed or velocity_mode_changed:
+            self.add_to_outgoing_data_message(simp.DataKey.VelocityMonthRecorded, self.get_velocity_month_rec())
+        if force or 'vel_year_rec' in changed or velocity_mode_changed:
+            self.add_to_outgoing_data_message(simp.DataKey.VelocityYearRecorded, self.get_velocity_year_rec())
+        if force or 'vel_nan_mode' in changed or velocity_mode_changed:
             self.add_to_outgoing_data_message(simp.DataKey.VelocityNanMode, self.get_velocity_nan_mode())
-        # if "vel_norm" in changed:
-        # if "speed_att" in changed:
+        # if 'vel_norm' in changed:
+        # if 'speed_att' in changed:
         if force or velocity_mode_changed:
             self.add_to_outgoing_data_message(
                 simp.DataKey.VelocityEnabled,
@@ -320,7 +328,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             Else, check which properties has changed and add 
             relevant data to outgoing message.
         '''
-        self._viewer.debug(f'Executing add_color_to_outgoing_data_message()', 1)
+        self._viewer.debug(f'Executing add_color_to_outgoing_data_message()', 4)
         color_mode_changed = 'color_mode' in changed
 
         if force or 'color' in changed or (color_mode_changed and self.state.color_mode == 'Fixed'):
@@ -446,7 +454,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
     # Create and send "Remove Scene Graph Node" message to OS
     def send_remove_sgn(self):
-        subject = bytearray(self.get_identifier_str() + simp.DELIM, 'utf-8')
+        subject = string_to_bytes(self.get_identifier_str() + simp.DELIM)
         simp.send_simp_message(self._viewer, simp.MessageType.RemoveSceneGraphNode, subject)
 
     def clear(self):
@@ -508,7 +516,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         return (r, g, b, a)
 
     def is_enabled(self, mode: simp.DataKey) -> tuple[bytearray, int]:
-        self._viewer.debug(f'Executing is_enabled()', 4)
         if mode == simp.DataKey.Visibility:
             return bool_to_bytes(bool(self.state.visible)), 1
         elif mode == simp.DataKey.VelocityEnabled:
@@ -559,15 +566,15 @@ class OpenSpaceLayerArtist(LayerArtist):
     def get_position_unit(self) -> tuple[bytearray]:
         if self._viewer_state.coordinate_system == "Cartesian":
             return (
-                bytearray(simp.dist_unit_astropy_to_simp(
+                string_to_bytes(simp.dist_unit_astropy_to_simp(
                     self._viewer_state.cartesian_unit_att 
-                ) + simp.DELIM, 'utf-8')
+                ) + simp.DELIM)
             )
         elif self._viewer_state.coordinate_system == "ICRS":
             return (
-                bytearray(simp.dist_unit_astropy_to_simp(
+                string_to_bytes(simp.dist_unit_astropy_to_simp(
                     self._viewer_state.alt_unit
-                ) + simp.DELIM, 'utf-8')
+                ) + simp.DELIM)
             )
 
     def get_coordinates(self) -> tuple[list[bytearray], int]:
@@ -635,19 +642,28 @@ class OpenSpaceLayerArtist(LayerArtist):
 
     def get_velocity_distance_unit(self) -> tuple[bytearray, int]:
         return (
-            bytearray(simp.dist_unit_astropy_to_simp(
+            string_to_bytes(simp.dist_unit_astropy_to_simp(
                 self._viewer_state.vel_distance_unit_att
-            ) + simp.DELIM, 'utf-8'),
+            ) + simp.DELIM),
             1
         )
 
     def get_velocity_time_unit(self) -> tuple[bytearray, int]:
         return (
-            bytearray(simp.time_unit_astropy_to_simp(
+            string_to_bytes(simp.time_unit_astropy_to_simp(
                 self._viewer_state.vel_time_unit_att
-            ) + simp.DELIM, 'utf-8'),
+            ) + simp.DELIM),
             1
         )
+
+    def get_velocity_day_rec(self) -> tuple[bytearray, int]:
+        return (int32_to_bytes(self._viewer_state.vel_day_rec), 1)
+
+    def get_velocity_month_rec(self) -> tuple[bytearray, int]:
+        return (int32_to_bytes(self._viewer_state.vel_month_rec), 1)
+
+    def get_velocity_year_rec(self) -> tuple[bytearray, int]:
+        return (int32_to_bytes(self._viewer_state.vel_year_rec), 1)
 
     def get_float_attribute(self, attr: np.ndarray) -> tuple[bytearray, int]:
         self._viewer.debug('Executing get_float_attribute()', 4)
@@ -691,7 +707,6 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         result = bytearray()
 
-        # Filter away removed indices from list and convert to simp string
         for value in attrib_data:
             result += float32_to_bytes(float(value))
 

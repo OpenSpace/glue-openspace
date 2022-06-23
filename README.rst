@@ -5,9 +5,9 @@ An experimental plugin was developed as part of the *Astrographics: Interactive 
 
 **2020**: Two master thesis students for OpenSpace, Aniisa Bihi & Johanna Granström, developed SIMP, a custom message protocol for OpenSpace. This plugin was developed further at the same time so that the messaging protocol could be tested.
 
-**2022**: Two master thesis students for OpenSpace, Jacob Molin & Victor Lindquist, have revamped and generalized SIMP to version `1.9.1`. In this work, this plugin has also been revamped and new functionality have been added.
+**2022**: Two master thesis students for OpenSpace, Jacob Molin & Victor Lindquist, have revamped and generalized SIMP to version ``1.9.1``. In this work, this plugin has also been revamped and new functionality have been added.
 
-> **WARNING** The changes to comply with SIMP version `1.9.1` are breaking.
+ > **WARNING** The changes to comply with SIMP version ``1.9.1`` are breaking.
 
 To try it out the 2022 verison (work in progress)::
 

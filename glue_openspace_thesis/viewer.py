@@ -10,13 +10,11 @@ from typing import Union
 
 from qtpy.QtCore import Qt
 from qtpy.QtGui import  QPixmap, QCursor
+
 from qtpy.QtWidgets import (
-    QLabel, QLineEdit, QGridLayout, QPushButton,
-    QWidget, QSpacerItem, QSizePolicy, QHBoxLayout,
-    QScrollArea, QVBoxLayout, QMainWindow,
-    QStatusBar, QMenuBar
+    QWidget, QLabel, QLineEdit, QGridLayout, 
+    QPushButton, QHBoxLayout, qApp
 )
-from qtpy.QtWidgets import qApp
 
 from glue.utils.qt import messagebox_on_error
 from glue.viewers.common.qt.data_viewer import DataViewer
@@ -529,10 +527,7 @@ class OpenSpaceDataViewer(DataViewer):
 
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
             self._socket.settimeout(0.0)
-            self.debug(f'Trying to create connection', 3)
             self._socket = socket.create_connection((ip, port if port != "" else 4700))
-            # self.debug(f'Connection created, self._socket={self._socket}')
-            self.debug(f'Connection created', 3)
         
         except simp.SimpError as ex:
             self.set_connection_state(self.ConnectionState.Disconnected)
