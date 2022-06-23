@@ -45,6 +45,9 @@ def float32_to_bytes(f: float) -> bytearray:
 def float32_list_to_bytes(fl: list[float]) -> bytearray:
     return struct.pack(f'!{len(fl)}f', *fl)
 
+def string_to_bytes(s: str) -> bytearray:
+    return bytearray(s, 'utf-8')
+
 def bytes_to_int32(i: bytearray) -> int:
     return int(struct.unpack('!i', i)[0])
 

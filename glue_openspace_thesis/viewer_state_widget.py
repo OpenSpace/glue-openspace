@@ -89,4 +89,3 @@ class OpenSpaceViewerStateWidget(QWidget):
         elif self._radio_vel_nan_mode.checkedId() == VelNaNRadioButtonId.Static:
             self._viewer_state.vel_nan_mode = 'Static'
             self.ui.vel_nan_value_stacked_widget.setCurrentIndex(1)
-

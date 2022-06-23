@@ -13,7 +13,6 @@ else:
 
 __all__ = ['simp']
 
-
 class Simp:
     protocol_version = Version(1, 9, 1)
     DELIM = ';'
@@ -39,6 +38,9 @@ class Simp:
         W = 'vel.w'
         VelocityDistanceUnit = 'vel.unit.dist'
         VelocityTimeUnit = 'vel.unit.time'
+        VelocityDayRecorded = 'vel.t0.day'
+        VelocityMonthRecorded = 'vel.t0.month'
+        VelocityYearRecorded = 'vel.t0.year'
         VelocityNanMode = 'vel.nan.mode'
         VelocityEnabled = 'vel.enable'
         # Color

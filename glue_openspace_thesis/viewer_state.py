@@ -6,13 +6,14 @@ from astropy import units as u
 from glue.core.data_combo_helper import ComponentIDComboHelper
 from echo import (ListCallbackProperty, SelectionCallbackProperty, CallbackProperty)
 from glue.viewers.common.state import ViewerState
-from glue.viewers.matplotlib.state import (DeferredDrawSelectionCallbackProperty as DDSCProperty)
+from glue.viewers.matplotlib.state import (DeferredDrawCallbackProperty as DDCProperty,
+                                           DeferredDrawSelectionCallbackProperty as DDSCProperty)
 
 DISTANCE_UNITS = [u.m, u.km, u.AU, u.lyr, u.pc, u.kpc, u.Mpc]
 TIME_UNITS = [u.s, u.min, u.h, u.day, u.yr]
 
 # ALTERNATIVE_TYPES = ['Distance']
-COORDINATE_SYSTEMS = ['Cartesian', 'ICRS']# , 'FK5', 'FK4', 'Galactic']
+COORDINATE_SYSTEMS = ['Cartesian', 'ICRS'] # , 'FK5', 'FK4', 'Galactic']
 VELOCITY_MODES = ['Static', 'Motion']
 VELOCITY_NAN_MODES = ['Hide', 'Static']
 
@@ -36,8 +37,11 @@ class OpenSpaceViewerState(ViewerState):
     u_att = SelectionCallbackProperty(default_index=0, docstring='The attribute to use for u')
     v_att = SelectionCallbackProperty(default_index=1, docstring='The attribute to use for v')
     w_att = SelectionCallbackProperty(default_index=2, docstring='The attribute to use for w')
-    vel_distance_unit_att = SelectionCallbackProperty(default_index=4, docstring='The velocity distance unit of the current dataset')
+    vel_distance_unit_att = SelectionCallbackProperty(default_index=1, docstring='The velocity distance unit of the current dataset')
     vel_time_unit_att = SelectionCallbackProperty(default_index=0, docstring='The velocity time unit of the current dataset')
+    vel_day_rec = DDCProperty(1, docstring='The day of the date when the velocity was recorded') # CallbackProperty()
+    vel_month_rec = DDCProperty(1, docstring='The month of the date when the velocity was recorded') # CallbackProperty()
+    vel_year_rec = DDCProperty(2000, docstring='The year of the date when the velocity was recorded') # CallbackProperty()
     # vel_norm = CallbackProperty(docstring='Whether velocity is normalized') #, docstring='Whether or not velocity is normalized'
     # speed_att = SelectionCallbackProperty(default_index=3, docstring='The attribute to use for speed')
     vel_nan_mode: Union[Literal['Hide'], Literal['Static']] = DDSCProperty(docstring="Which velocity NaN value mode to use", default_index=0)
@@ -63,6 +67,10 @@ class OpenSpaceViewerState(ViewerState):
         OpenSpaceViewerState.vel_time_unit_att.set_choices(self, [str(x) for x in TIME_UNITS])
         OpenSpaceViewerState.vel_nan_mode.set_choices(self, VELOCITY_NAN_MODES)
         # OpenSpaceViewerState.alt_type.set_choices(self, ALTERNATIVE_TYPES)
+
+        # OpenSpaceViewerState.vel_day_rec.setValue(1)
+        # OpenSpaceViewerState.vel_month_rec.setValue(1)
+        # OpenSpaceViewerState.vel_year_rec.setValue(2000)
 
         self.x_att_helper = ComponentIDComboHelper(self, 'x_att',
                                                      numeric=True,

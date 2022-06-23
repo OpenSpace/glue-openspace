@@ -26,20 +26,20 @@ class OpenSpaceLayerState(LayerState):
     alpha = CallbackProperty()
 
     size = CallbackProperty()
-    size_mode: Union[Literal['Fixed'], Literal['Linear']] = DDSCProperty(docstring="Which size mode to use", default_index=0)
-    size_att = DDSCProperty(docstring="The attribute to use for the size")
-    size_vmin = DDCProperty(docstring="The lower level for the size")
-    size_vmax = DDCProperty(docstring="The upper level for the size")
+    size_mode: Union[Literal['Fixed'], Literal['Linear']] = DDSCProperty(docstring='Which size mode to use', default_index=0)
+    size_att = DDSCProperty(docstring='The attribute to use for the size')
+    size_vmin = DDCProperty(docstring='The lower level for the size')
+    size_vmax = DDCProperty(docstring='The upper level for the size')
 
     # Color
     # (notice the diff classes 'DDCProperty' and 'DDSCProperty')
-    color_mode: Union[Literal['Fixed'], Literal['Linear']] = DDSCProperty(docstring="Which color mode to use", default_index=0)
-    cmap_att = DDSCProperty(docstring="The attribute to use for the color")
-    cmap_vmin = DDCProperty(docstring="The lower level for the colormap")
-    cmap_vmax = DDCProperty(docstring="The upper level for the colormap")
-    cmap = DDCProperty(docstring="The colormap to use (when in colormap mode)")
-    cmap_nan_mode: Union[Literal['Hide'], Literal['FixedColor']] = DDSCProperty(docstring="Which colormap attribute NaN value mode to use", default_index=0)
-    cmap_nan_color = CallbackProperty('#fcba03', docstring="The colormap attribute NaN value color")
+    color_mode: Union[Literal['Fixed'], Literal['Linear']] = DDSCProperty(docstring='Which color mode to use', default_index=0)
+    cmap_att = DDSCProperty(docstring='The attribute to use for the color')
+    cmap_vmin = DDCProperty(docstring='The lower level for the colormap')
+    cmap_vmax = DDCProperty(docstring='The upper level for the colormap')
+    cmap = DDCProperty(docstring='The colormap to use (when in colormap mode)')
+    cmap_nan_mode: Union[Literal['Hide'], Literal['FixedColor']] = DDSCProperty(docstring='Which colormap attribute NaN value mode to use', default_index=0)
+    cmap_nan_color = CallbackProperty('#fcba03', docstring='The colormap attribute NaN value color')
 
     def __init__(self, layer=None, **kwargs):
         self.has_sent_initial_data = False
@@ -103,19 +103,16 @@ class OpenSpaceLayerState(LayerState):
             self.size = self.layer.style.markersize
             self._sync_markersize = keep_in_sync(self, 'size', self.layer.style, 'markersize')
 
-    # Loads the columns into the cmap attributes 
+    # Loads the columns into the cmap attributes
     def _on_layer_change(self, layer=None):
-        with delay_callback(self, 'size_vmin', 'size_vmax'):
+        with delay_callback(self, 'cmap_vmin', 'cmap_vmax', 'size_vmin', 'size_vmax'):
+            helpers = [self.size_att_helper, self.cmap_att_helper]
             if self.layer is None:
-                self.size_att_helper.set_multiple_data([])
+                for helper in helpers:
+                    helper.set_multiple_data([])
             else:
-                self.size_att_helper.set_multiple_data([self.layer])
-
-        with delay_callback(self, 'cmap_vmin', 'cmap_vmax'):
-            if self.layer is None:
-                self.cmap_att_helper.set_multiple_data([])
-            else:
-                self.cmap_att_helper.set_multiple_data([self.layer])
+                for helper in helpers:
+                    helper.set_multiple_data([self.layer])
 
     def flip_cmap(self):
         """

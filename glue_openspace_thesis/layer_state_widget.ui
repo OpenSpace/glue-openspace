@@ -492,7 +492,6 @@
               </item>
               <item row="2" column="1" colspan="2">
                 <widget class="QLineEdit" name="valuetext_alpha"/>
-                <!-- <widget class="QLineEdit" name="valuetext_cmap_vmin"/> -->
               </item>
               <!--================================================================-->
               <item row="3" column="0">
