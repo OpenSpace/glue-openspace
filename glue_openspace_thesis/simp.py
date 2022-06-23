@@ -95,7 +95,6 @@ class Simp:
 
     @staticmethod
     def send_simp_message(viewer: OpenSpaceDataViewer, message_type: MessageType, subjectBuffer = bytearray()):
-        print(f'Executing send_simp_message() (message_type={message_type})')
         length_of_subject = str(format(len(subjectBuffer), '015d')) # formats to a 15 character string
         message = bytes(str(simp.protocol_version) + message_type + length_of_subject, 'utf-8') + subjectBuffer
 

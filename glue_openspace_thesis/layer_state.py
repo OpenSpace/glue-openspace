@@ -39,7 +39,7 @@ class OpenSpaceLayerState(LayerState):
     cmap_vmax = DDCProperty(docstring="The upper level for the colormap")
     cmap = DDCProperty(docstring="The colormap to use (when in colormap mode)")
     cmap_nan_mode: Union[Literal['Hide'], Literal['FixedColor']] = DDSCProperty(docstring="Which colormap attribute NaN value mode to use", default_index=0)
-    cmap_nan_color = CallbackProperty('#fcba03',docstring="The colormap attribute NaN value color")
+    cmap_nan_color = CallbackProperty('#fcba03', docstring="The colormap attribute NaN value color")
 
     def __init__(self, layer=None, **kwargs):
         self.has_sent_initial_data = False

@@ -31,7 +31,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
     _removed_indices: np.ndarray
 
-    has_updated_points: bool
+    _has_updated_points: bool
 
     def __init__(self, viewer, *args, **kwargs):
         super(OpenSpaceLayerArtist, self).__init__(*args, **kwargs)
@@ -44,7 +44,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         self._display_name = None
         self._state = None
 
-        self.has_updated_points = False
+        self._has_updated_points = False
 
     def add_to_outgoing_data_message(self, data_key: simp.DataKey, entry: tuple[bytearray, int]):
         '''
@@ -94,6 +94,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             self.add_initial_data_to_message()
 
     def _on_attribute_change(self, force):
+        self._viewer.debug(f'Executing _on_attribute_change()')
         changed = self.pop_changed_properties()
 
         if len(changed) == 0 and not force:
@@ -319,7 +320,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             Else, check which properties has changed and add 
             relevant data to outgoing message.
         '''
-        self._viewer.debug(f'Executing add_color_to_outgoing_data_message()', 4)
+        self._viewer.debug(f'Executing add_color_to_outgoing_data_message()', 1)
         color_mode_changed = 'color_mode' in changed
 
         if force or 'color' in changed or (color_mode_changed and self.state.color_mode == 'Fixed'):
@@ -335,13 +336,14 @@ class OpenSpaceLayerArtist(LayerArtist):
                     self.get_cmap_nan_mode()
                 )
             
-            if (force or 'cmap_nan_color' in changed or color_mode_changed)\
-                and self.state.cmap_nan_mode == 'FixedColor':
-                (r, g, b, a) = self.get_cmap_nan_color()
+            if (
+                (force or ('cmap_nan_color' in changed) or color_mode_changed or 'cmap_nan_mode' in changed)
+                and self.state.cmap_nan_mode == 'FixedColor'
+            ):
+                (r, g, b, _) = self.get_cmap_nan_color()
                 self.add_to_outgoing_data_message(simp.DataKey.ColormapNanR, (r, 1))
                 self.add_to_outgoing_data_message(simp.DataKey.ColormapNanG, (g, 1))
                 self.add_to_outgoing_data_message(simp.DataKey.ColormapNanB, (b, 1))
-                self.add_to_outgoing_data_message(simp.DataKey.ColormapNanA, (a, 1))
 
             min, max = self.get_colormap_limits()
             if force or 'cmap_vmin' in changed or color_mode_changed:
@@ -478,7 +480,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
     def get_color(self, color=None) -> tuple[bytearray, bytearray, bytearray, bytearray]:
         """
-        `color` should be [r, g, b] or [r, g, b, a].
+        `color` should be a list or tuple [r, g, b] or [r, g, b, a].
         If `color` isn't specified, self.state.color 
         or green will be used.
         """
@@ -486,9 +488,17 @@ class OpenSpaceLayerArtist(LayerArtist):
             color = to_rgb(self.state.color if (self.state.color != None) 
                                             else [0.0,1.0,0.0,1.0])
         else:
-            if not isinstance(color, list):
-                self._viewer.log('The provided color is not of type list...')
+            if not (isinstance(color, list) or isinstance(color, tuple)):
+                self._viewer.log(
+                    f'The provided color must be of type list or tuple. It\'s of type {type(color)}'
+                )
                 return
+
+        if len(color) < 3 or len(color) > 4:
+            self._viewer.log(
+                f'The provided color is not of proper length. It should be of '\
+                + f'length 3 (RGB) or 4 (RGBA). It\'s of length {len(color)}')
+            return
 
         r = float32_to_bytes(color[0])
         g = float32_to_bytes(color[1])
@@ -498,7 +508,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         return (r, g, b, a)
 
     def is_enabled(self, mode: simp.DataKey) -> tuple[bytearray, int]:
-        self._viewer.debug(f'Executing is_enabled()')
+        self._viewer.debug(f'Executing is_enabled()', 4)
         if mode == simp.DataKey.Visibility:
             return bool_to_bytes(bool(self.state.visible)), 1
         elif mode == simp.DataKey.VelocityEnabled:
@@ -566,16 +576,16 @@ class OpenSpaceLayerArtist(LayerArtist):
         x: list[float]
         y: list[float]
         z: list[float]
-        has_updated_points = False
+        _has_updated_points = False
 
         if self._viewer_state.coordinate_system == 'Cartesian':
-            has_updated_points = True
+            _has_updated_points = True
             x = self.state.layer[self._viewer_state.x_att]
             y = self.state.layer[self._viewer_state.y_att]
             z = self.state.layer[self._viewer_state.z_att]
 
         elif self._viewer_state.coordinate_system == 'ICRS':
-            has_updated_points = True
+            _has_updated_points = True
             # Convert ICRS to cartesian coordinates
             coordinates = SkyCoord(
                 self.state.layer[self._viewer_state.lon_att] * ap_u.deg,
@@ -583,11 +593,9 @@ class OpenSpaceLayerArtist(LayerArtist):
                 distance=self.state.layer[self._viewer_state.alt_att] * ap_u.Unit(self._viewer_state.alt_unit),
                 frame='icrs'
             )
-            x, y, z = coordinates.galactic.cartesian.xyz.value
-            # unit = coordinates.galactic.cartesian.xyz.unit
-            
+            x, y, z = coordinates.galactic.cartesian.xyz.value            
 
-        if has_updated_points:
+        if _has_updated_points:
             x_res = bytearray()
             y_res = bytearray()
             z_res = bytearray()
@@ -600,7 +608,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
     def get_cmap_nan_mode(self) -> tuple[bytearray, int]:
         mode = -1
-        if self.state.cmap_nan_mode == 'Hidden':
+        if self.state.cmap_nan_mode == 'Hide':
             mode = 0
         elif self.state.cmap_nan_mode == 'FixedColor':
             mode = 1

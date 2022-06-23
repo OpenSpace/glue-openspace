@@ -363,14 +363,15 @@ class OpenSpaceDataViewer(DataViewer):
                     continue
 
                 layer_outgoing_data_message = self._outgoing_data_message[layer_identifier]
-                if len(layer_outgoing_data_message.items()) == 0:
+                n_attr_to_be_sent = len(layer_outgoing_data_message.items())
+                if n_attr_to_be_sent == 0:
                     continue
 
                 subject_buffer = bytearray() + bytes(layer.get_subject_prefix(), 'utf-8')
                 for simp_key, (data_buffer, n_vals) in layer_outgoing_data_message.items():
                     subject_buffer += bytearray(str(simp_key + simp.DELIM), 'utf-8')
                     n_vals_str = f'{n_vals} ' if n_vals > 1 else ''
-                    self.log(f'Sending {n_vals_str}{simp_key} to OpenSpace')
+                    self.log(f'Adding {n_vals_str}{simp_key} to outgoing message')
                     if (n_vals > 1):
                         subject_buffer += int32_to_bytes(n_vals) # Get 32 bits (4 bytes)
                     subject_buffer += data_buffer
@@ -381,6 +382,7 @@ class OpenSpaceDataViewer(DataViewer):
 
                 if len(subject_buffer):
                     simp.send_simp_message(self, simp.MessageType.Data, subject_buffer)
+                    self.log(f'Sent SIMP {simp.MessageType.Data} message with {n_attr_to_be_sent} attributes to OpenSpace')
                     layer.state.has_sent_initial_data = True
                 
             self.set_connection_state(old_connection_state)
@@ -439,9 +441,7 @@ class OpenSpaceDataViewer(DataViewer):
     def read_socket(self):
         self.debug(f'Executing read_socket()', 4)
         try:
-            # message_received = bytearray() + self._socket.recv(4096)
             message_received = self._socket.recv(4096)
-            self.debug(f'message_received={message_received}', 1)
         except socket.error as err:
             self.log('Could not receive message.')
             self.log(f'Socket error: {err}')
