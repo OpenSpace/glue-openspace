@@ -42,16 +42,8 @@ class OpenSpaceViewerStateWidget(QWidget):
     def _update_visible_options(self, *args, **kwargs):
         if self._viewer_state.coordinate_system == 'Cartesian':
             self.ui.coordinates_stacked_widget.setCurrentIndex(0)
-
         else:
             self.ui.coordinates_stacked_widget.setCurrentIndex(1)
-
-            if self._viewer_state.coordinate_system in ['ICRS', 'FK5', 'FK4']:
-                self.ui.label_lon_att.setText('Ra:')
-                self.ui.label_lat_att.setText('Dec:')
-            else:
-                self.ui.label_lon_att.setText('Longitude:')
-                self.ui.label_lat_att.setText('Latitude:')
 
         if self._viewer_state.velocity_mode == 'Motion':
             self.ui.velocity_stacked_widget.setCurrentIndex(1)
@@ -78,7 +70,7 @@ class OpenSpaceViewerStateWidget(QWidget):
         self.ui.radio_vel_nan_static.toggled.connect(self._update_vel_nan_mode)
 
         # Set Hide button checked initially 
-        self.ui.radio_vel_nan_hide.setChecked(True)
+        self.ui.radio_vel_nan_hide.setChecked(True) # TODO: Can we do this in XML?
         self._update_vel_nan_mode()
         
     def _update_vel_nan_mode(self, *args):

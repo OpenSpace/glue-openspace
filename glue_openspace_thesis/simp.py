@@ -28,10 +28,11 @@ class Simp:
         X = 'pos.x'
         Y = 'pos.y'
         Z = 'pos.z'
-        # Ra = 'pos.ra'
+        # RA = 'pos.ra'
         # Dec = 'pos.dec'
         # Distance = 'pos.dist'
         PointUnit = 'pos.unit'
+        # PositionCoordinateSystem = 'pos.coordsys'
         # Velocity
         U = 'vel.u'
         V = 'vel.v'
@@ -77,9 +78,9 @@ class Simp:
         Kilometer = 'km'
         AU = 'AU'
         LightYears = 'lightyears'
-        Parsec = 'parsecs'
-        Kiloparsec = 'kiloparsecs'
-        Megaparsec = 'megaparsecs'
+        Parsec = 'parsec'
+        Kiloparsec = 'kiloparsec'
+        Megaparsec = 'megaparsec'
 
     class TimeUnit(str, Enum):
         Second = 'second'
@@ -185,29 +186,6 @@ class Simp:
 
         offset += len(byte_buffer)
         return value, offset
-
-    # @staticmethod
-    # def read_single_color(message: bytearray, offset: int) -> tuple[tuple[float, float, float, float], int]:
-    #     color, offset = simp.read_color(message, offset)
-    #     offset += 1
-    #     return color, offset
-
-    # @staticmethod
-    # def read_color(message: bytearray, offset: int) -> tuple[tuple[float, float, float, float], int]:
-    #     if message[offset] != '[':
-    #         raise simp.SimpError(f'Expected to read "[", got {message[offset]} in "readColor"')
-    #     offset += 1
-
-    #     r, offset = simp.read_float32(message, offset)
-    #     g, offset = simp.read_float32(message, offset)
-    #     b, offset = simp.read_float32(message, offset)
-    #     a, offset = simp.read_float32(message, offset)
-
-    #     if message[offset] != ']':
-    #         raise simp.SimpError(f'Expected to read "]", got {message[offset]} in "readColor"')
-    #     offset += 1
-
-    #     return (r, g, b, a), offset
 
     @staticmethod
     def read_string(message: bytearray, offset: int) -> tuple[str, int]:

@@ -66,7 +66,7 @@
                   </property>
                   <!--================================================================-->
                   <widget class="QWidget" name="cartesian">
-                    <layout class="QGridLayout" name="cartesianGrid">
+                    <layout class="QGridLayout" name="cartesian_grid">
                       <property name="leftMargin">
                         <number>0</number>
                       </property>
@@ -98,7 +98,6 @@
                         </widget>
                       </item>
                       <!--================================================================-->
-                      <!--================================================================-->
                       <item row="1" column="0" alignment="Qt::AlignRight">
                         <widget class="QLabel" name="label_y_att">
                           <property name="text">
@@ -114,7 +113,6 @@
                         </widget>
                       </item>
                       <!--================================================================-->
-                      <!--================================================================-->
                       <item row="2" column="0" alignment="Qt::AlignRight">
                         <widget class="QLabel" name="label_z_att">
                           <property name="text">
@@ -129,7 +127,6 @@
                           </property>
                         </widget>
                       </item>
-                      <!--================================================================-->
                       <!--================================================================-->
                       <item row="3" column="0" alignment="Qt::AlignRight">
                         <widget class="QLabel" name="label_cartesian_unit_att">
@@ -149,9 +146,8 @@
                     </layout>
                   </widget>
                   <!--================================================================-->
-                  <!--================================================================-->
-                  <widget class="QWidget" name="non_cartesian">
-                    <layout class="QGridLayout" name="non_cartesian_grid">
+                  <widget class="QWidget" name="icrs">
+                    <layout class="QGridLayout" name="icrs_grid">
                       <property name="leftMargin">
                         <number>0</number>
                       </property>
@@ -169,55 +165,70 @@
                       </property>
                       <!--================================================================-->
                       <item row="0" column="0" alignment="Qt::AlignRight">
-                        <widget class="QLabel" name="label_lon_att">
+                        <widget class="QLabel" name="label_ra_att">
                           <property name="text">
-                            <string>Longitude:</string>
+                            <string>RA:</string>
                           </property>
                         </widget>
                       </item>
                       <item row="0" column="1">
-                        <widget class="QComboBox" name="combosel_lon_att">
+                        <widget class="QComboBox" name="combosel_ra_att">
                           <property name="sizeAdjustPolicy">
                             <enum>QComboBox::AdjustToMinimumContentsLength</enum>
                           </property>
                         </widget>
                       </item>
                       <!--================================================================-->
-                      <!--================================================================-->
                       <item row="1" column="0" alignment="Qt::AlignRight">
-                        <widget class="QLabel" name="label_lat_att">
+                        <widget class="QLabel" name="label_dec_att">
                           <property name="text">
-                            <string>Latitude:</string>
+                            <string>Dec:</string>
                           </property>
                         </widget>
                       </item>
                       <item row="1" column="1">
-                        <widget class="QComboBox" name="combosel_lat_att">
+                        <widget class="QComboBox" name="combosel_dec_att">
                           <property name="sizeAdjustPolicy">
                             <enum>QComboBox::AdjustToMinimumContentsLength</enum>
                           </property>
                         </widget>
                       </item>
                       <!--================================================================-->
-                      <!--================================================================-->
-                      <!-- <item row="2" column="0" alignment="Qt::AlignRight">
-                        <widget class="QComboBox" name="combosel_alt_type">
-                          <property name="sizeAdjustPolicy">
-                            <enum>QComboBox::AdjustToContents</enum>
-                          </property>
-                        </widget>
-                      </item> -->
-                      <item row="2" column="0" alignment="Qt::AlignRight|Qt::AlignVCenter">
-                        <widget class="QLabel" name="label_alt_att">
+                      <item row="2" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_icrs_dist_att">
                           <property name="text">
                             <string>Distance:</string>
                           </property>
                         </widget>
                       </item>
                       <item row="2" column="1">
+                        <widget class="QComboBox" name="combosel_icrs_dist_att">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      <!--================================================================-->
+                      <item row="3" column="0" alignment="Qt::AlignRight">
+                        <widget class="QLabel" name="label_icrs_dist_unit_att">
+                          <property name="text">
+                            <string>Unit (distance):</string>
+                          </property>
+                        </widget>
+                      </item>
+                      <item row="3" column="1">
+                        <widget class="QComboBox" name="combosel_icrs_dist_unit_att">
+                          <property name="sizeAdjustPolicy">
+                            <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                          </property>
+                        </widget>
+                      </item>
+                      
+                      <!--========================= TODO: REMOVE ============================-->
+                      <!-- <item row="2" column="1">
                         <layout class="QGridLayout" name="distance_grid">
                           <item row="0" column="0" colspan="2">
-                            <widget class="QComboBox" name="combosel_alt_att"/>
+                            <widget class="QComboBox" name="combosel_icrs_dist_unit_att"/>
                           </item>
                           <item row="1" column="0">
                             <spacer name="horizontalSpacer">
@@ -240,7 +251,7 @@
                             </widget>
                           </item>
                         </layout>
-                      </item>
+                      </item> -->
                     </layout>
                   </widget>
                   <!--================================================================-->

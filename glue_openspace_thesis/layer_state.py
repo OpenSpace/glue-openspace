@@ -44,8 +44,6 @@ class OpenSpaceLayerState(LayerState):
     def __init__(self, layer=None, **kwargs):
         self.has_sent_initial_data = False
         self.will_send_message = True
-        # self.has_luminosity_data = False
-        # self.has_velocity_data = False
 
         self.limits_cache = {}
 
