@@ -159,11 +159,18 @@ class OpenSpaceLayerArtist(LayerArtist):
             elif self.state.size < 0.0:
                 self.state.size = 0.0
 
-    def receive_message(self, subject: bytearray, offset: int):
+    def receive_message(self, message_type: simp.MessageType, subject: bytearray, offset: int):
         self.state.will_send_message = False
 
+        if message_type == simp.MessageType.Data:
+            self.receive_data_message(subject, offset)
+
+        self.redraw()
+        self.state.will_send_message = True
+
+    def receive_data_message(self, subject: bytearray, offset: int):
         color = to_rgb(self.state.color)
-        new_color = color
+        new_color = list(color)
         
         while offset != len(subject):
             simp.check_offset(subject, offset)
@@ -181,11 +188,8 @@ class OpenSpaceLayerArtist(LayerArtist):
             
             # Update Colormap Enabled
             elif data_key == simp.DataKey.ColormapEnabled:
-                colormap_enable, offset = simp.read_bool(subject, offset)
-                if colormap_enable:
-                    self.state.color_mode = 'Linear'
-                else:
-                    self.state.color_mode = 'Fixed'
+                colormap_enabled, offset = simp.read_bool(subject, offset)
+                self.state.color_mode = 'Linear' if colormap_enabled else 'Fixed'
 
             # Update Colormap NaN Mode
             elif data_key == simp.DataKey.ColormapNanMode:
@@ -197,17 +201,14 @@ class OpenSpaceLayerArtist(LayerArtist):
                 self.state.size, offset = simp.read_float32(subject, offset)
             
             # Update Linear Size Enabled
-            elif data_key == simp.DataKey.ColormapEnabled:
-                # TODO: change to bool instead of string
-                self.state.size_mode, offset = simp.read_string(subject, offset)
+            elif data_key == simp.DataKey.LinearSizeEnabled:
+                linear_size_enabled, offset = simp.read_bool(subject, offset)
+                self.state.size_mode = 'Linear' if linear_size_enabled else 'Fixed'
 
             # Update Velocity Enabled
             elif data_key == simp.DataKey.VelocityEnabled:                
-                velocity_enable, offset = simp.read_bool(subject, offset)
-                if velocity_enable:
-                    self._viewer_state.velocity_mode = 'Motion'
-                else:
-                    self._viewer_state.velocity_mode = 'Static'
+                velocity_enabled, offset = simp.read_bool(subject, offset)
+                self._viewer_state.velocity_mode = 'Motion' if velocity_enabled else 'Static'
             
             # Update Velocity NaN Mode
             elif data_key == simp.DataKey.VelocityNanMode:
@@ -224,11 +225,10 @@ class OpenSpaceLayerArtist(LayerArtist):
                     + f'support the attribute \'{data_key}\'.'
                 )
 
+        self._viewer.log(f'new_color={new_color}')
+        new_color = tuple(new_color)
         if new_color[0] != color[0] or new_color[1] != color[1] or new_color[2] != color[2]:
             self.state.color = to_hex(new_color, keep_alpha=False)
-
-        self.state.will_send_message = True
-        self.redraw()
 
     def add_points_to_outgoing_data_message(self, *, changed: set = {}, force: bool = False):
         '''
@@ -512,14 +512,14 @@ class OpenSpaceLayerArtist(LayerArtist):
         if mode == simp.DataKey.Visibility:
             return bool_to_bytes(bool(self.state.visible)), 1
         elif mode == simp.DataKey.VelocityEnabled:
-            enabled = True if self._viewer_state.velocity_mode == 'Motion' else False
-            return bool_to_bytes(bool(enabled)), 1
+            enabled = self._viewer_state.velocity_mode == 'Motion'
+            return bool_to_bytes(enabled), 1
         elif mode == simp.DataKey.ColormapEnabled:
-            enabled = True if self.state.color_mode == 'Linear' else False
-            return bool_to_bytes(bool(enabled)), 1
+            enabled = self.state.color_mode == 'Linear'
+            return bool_to_bytes(enabled), 1
         elif mode == simp.DataKey.LinearSizeEnabled:
-            enabled = True if self.state.size_mode == 'Linear' else False
-            return bool_to_bytes(bool(enabled)), 1
+            enabled = self.state.size_mode == 'Linear'
+            return bool_to_bytes(enabled), 1
         else:
             raise simp.SimpError(
                 f'The data key \'{mode}\' can\'t be used to set enable/disable'

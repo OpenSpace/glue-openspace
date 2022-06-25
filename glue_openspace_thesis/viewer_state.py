@@ -47,7 +47,7 @@ class OpenSpaceViewerState(ViewerState):
     lum_att = SelectionCallbackProperty(docstring='The attribute to use for luminosity')
     vel_att = SelectionCallbackProperty(docstring='The attribute to use for velocity')
     alt_att = SelectionCallbackProperty()
-    alt_unit = SelectionCallbackProperty(default_index=4, docstring='The unit of the current dataset')
+    alt_unit = SelectionCallbackProperty(default_index=1, docstring='The unit of the current dataset')
     # alt_type = SelectionCallbackProperty(default_index=0)
 
     layers = ListCallbackProperty()
