@@ -193,10 +193,10 @@ class OpenSpaceLayerArtist(LayerArtist):
                 colormap_enabled, offset = simp.read_bool(subject, offset)
                 self.state.color_mode = 'Linear' if colormap_enabled else 'Fixed'
 
-            # Update Colormap NaN Mode
-            elif data_key == simp.DataKey.ColormapNanMode:
-                # TODO: change to int instead of string
-                self.state.cmap_nan_mode, offset = simp.read_string(subject, offset)
+            # # Update Colormap NaN Mode
+            # elif data_key == simp.DataKey.ColormapNanMode:
+            #     # TODO: change to int instead of string
+            #     self.state.cmap_nan_mode, offset = simp.read_string(subject, offset)
 
             # Update Size
             elif data_key == simp.DataKey.FixedSize:
@@ -212,10 +212,10 @@ class OpenSpaceLayerArtist(LayerArtist):
                 velocity_enabled, offset = simp.read_bool(subject, offset)
                 self._viewer_state.velocity_mode = 'Motion' if velocity_enabled else 'Static'
             
-            # Update Velocity NaN Mode
-            elif data_key == simp.DataKey.VelocityNanMode:
-                # TODO: change to int instead of string
-                self._viewer_state.vel_nan_mode, offset = simp.read_string(subject, offset)
+            # # Update Velocity NaN Mode
+            # elif data_key == simp.DataKey.VelocityNanMode:
+            #     # TODO: change to int instead of string
+            #     self._viewer_state.vel_nan_mode, offset = simp.read_string(subject, offset)
             
             # Toggle Visibility
             elif data_key == simp.DataKey.Visibility:
