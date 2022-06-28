@@ -49,13 +49,13 @@ def string_to_bytes(s: str) -> bytearray:
     return bytearray(s, 'utf-8')
 
 def bytes_to_int32(i: bytearray) -> int:
-    return int(struct.unpack('!i', i)[0])
+    return int(struct.unpack('@i', i)[0])
 
 def bytes_to_bool(b: bytearray) -> bool:
-    return bool(struct.unpack('!?', b)[0])
+    return bool(struct.unpack('@?', b)[0])
 
 def bytes_to_float32(f: bytearray) -> float:
-    return float(struct.unpack('!f', f)[0])
+    return float(struct.unpack('@f', f)[0])
 
 def print_attr_of_object_recursive(obj, depth = 2, call_callables = False):
     initial_depth = depth
