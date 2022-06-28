@@ -34,7 +34,7 @@ class DebugMode(int, Enum):
     Off = 0,
     On = 1,
     Verbose = 2
-DEBUG = DebugMode.On # TODO: Always set this to Off before committing!
+DEBUG = DebugMode.Off # TODO: Always set this to Off before committing!
 DEBUG_VERBOSICITY = 1
 
 TEXTURE_ORIGIN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))

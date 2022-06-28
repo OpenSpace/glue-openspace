@@ -31,8 +31,8 @@ class OpenSpaceViewerState(ViewerState):
     # ICRS
     ra_att = SelectionCallbackProperty(docstring='The attribute to use for RA')
     dec_att = SelectionCallbackProperty(docstring='The attribute to use for Dec')
-    icrs_dist_att = SelectionCallbackProperty()
-    icrs_dist_unit_att = SelectionCallbackProperty(default_index=4, docstring='The distance unit for RA Dec coordinates')
+    icrs_dist_att = SelectionCallbackProperty(docstring='The attribute to use for ICRS distance')
+    icrs_dist_unit_att = SelectionCallbackProperty(default_index=4, docstring='The distance unit for ICRS coordinates')
 
     # Velocity
     velocity_mode = SelectionCallbackProperty(default_index=0, docstring='The mode for velocity')

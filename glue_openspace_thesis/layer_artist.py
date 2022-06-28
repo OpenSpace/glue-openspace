@@ -229,21 +229,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         self.state.will_send_message = True
         self.redraw()
 
-    def filter_ra_dec(self, _ra, _dec, _dist) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        ra, dec, dist, removed_indices = [], [], [], []
-
-        for i in range(len(_ra)):
-            if np.any(np.isnan(np.array([ _ra[i], _dec[i], _dist[i] ]))):
-                removed_indices.append(i)
-            else:
-                ra.append(_ra[i])
-                dec.append(_dec[i])
-                dist.append(_dist[i])
-
-        removed_indices = np.unique(np.array(removed_indices))
-
-        return ra, dec, dist, removed_indices
-
     def add_points_to_outgoing_data_message(self, *, changed: set = {}, force: bool = False):
         '''
             Adds all point data to outgoing message if force is true.
@@ -253,57 +238,38 @@ class OpenSpaceLayerArtist(LayerArtist):
         self._viewer.debug(f'Executing add_points_to_outgoing_data_message()', 4)
         coord_sys_changed = 'coordinate_system' in changed
 
-        # # ICRS, Convert ICRS => Cartesian
-        # icrs_changed = 'ra_att' in changed or 'dec_att' in changed or 'icrs_dist_att' in changed
-        # if (force or coord_sys_changed or icrs_changed) and self._viewer_state.coordinate_system == 'ICRS':
-            # ra, dec, distance, self._removed_indices = self.filter_ra_dec(
-            #     self.state.layer[self._viewer_state.ra_att],
-            #     self.state.layer[self._viewer_state.dec_att],
-            #     self.state.layer[self._viewer_state.icrs_dist_att]
-            # )
-            # dist_unit = self._viewer_state.icrs_dist_unit_att
+        # ICRS, Convert ICRS -> Cartesian
+        icrs_changed = 'ra_att' in changed or 'dec_att' in changed or 'icrs_dist_att' in changed
+        if (force or coord_sys_changed or icrs_changed) and self._viewer_state.coordinate_system == 'ICRS':
+            ra = self.state.layer[self._viewer_state.ra_att]
+            dec = self.state.layer[self._viewer_state.dec_att]
+            distance = self.state.layer[self._viewer_state.icrs_dist_att]
+            dist_unit = self._viewer_state.icrs_dist_unit_att
 
-            # # Get cartesian coordinates on unit galactic sphere
-            # coordinates = SkyCoord(
-            #     ra * ap_u.deg,
-            #     dec * ap_u.deg,
-            #     distance=distance * ap_u.Unit(dist_unit),
-            #     frame='icrs'
-            # )
-            # x, y, z = coordinates.galactic.cartesian.xyz
-            # # self._viewer.debug(f'x[0]={x[0]}, y[0]={y[0]}, z[0]={z[0]}')
-            # # self._viewer.debug(f'len(x)={len(x)}, len(y)={len(y)}, len(z)={len(z)}')
+            # Get cartesian coordinates on unit galactic sphere
+            coordinates = SkyCoord(
+                ra * ap_u.deg,
+                dec * ap_u.deg,
+                distance=distance * ap_u.Unit(dist_unit),
+                frame='icrs'
+            )
+            x, y, z = coordinates.galactic.cartesian.xyz
+            # self._viewer.debug(f'x[0]={x[0]}, y[0]={y[0]}, z[0]={z[0]}')
+            # self._viewer.debug(f'len(x)={len(x)}, len(y)={len(y)}, len(z)={len(z)}')
+            self._viewer.debug(f'Converted ICRS -> Cartesian', 2)
 
-            # self.add_to_outgoing_data_message(
-            #     simp.DataKey.X,
-            #     self.get_float_attribute(x.value)
-            # )
-            # self.add_to_outgoing_data_message(
-            #     simp.DataKey.Y,
-            #     self.get_float_attribute(y.value)
-            # )
-            # self.add_to_outgoing_data_message(
-            #     simp.DataKey.Z,
-            #     self.get_float_attribute(z.value)
-            # )
-
-        # ICRS
-        if self._viewer_state.coordinate_system == 'ICRS':
-            if force or coord_sys_changed or 'ra_att' in changed:
-                self.add_to_outgoing_data_message(
-                    simp.DataKey.RA,
-                    self.get_float_attribute(self.state.layer[self._viewer_state.ra_att])
-                )
-            if force or coord_sys_changed or 'dec_att' in changed:
-                self.add_to_outgoing_data_message(
-                    simp.DataKey.Dec,
-                    self.get_float_attribute(self.state.layer[self._viewer_state.dec_att])
-                )
-            if force or coord_sys_changed or 'icrs_dist_att' in changed:
-                self.add_to_outgoing_data_message(
-                    simp.DataKey.Distance,
-                    self.get_float_attribute(self.state.layer[self._viewer_state.icrs_dist_att])
-                )
+            self.add_to_outgoing_data_message(
+                simp.DataKey.X,
+                self.get_float_attribute(x.value)
+            )
+            self.add_to_outgoing_data_message(
+                simp.DataKey.Y,
+                self.get_float_attribute(y.value)
+            )
+            self.add_to_outgoing_data_message(
+                simp.DataKey.Z,
+                self.get_float_attribute(z.value)
+            )
 
         # Cartesian
         elif self._viewer_state.coordinate_system == 'Cartesian':
@@ -322,13 +288,6 @@ class OpenSpaceLayerArtist(LayerArtist):
                     simp.DataKey.Z,
                     self.get_float_attribute(self.state.layer[self._viewer_state.z_att])
                 )
-
-        # Coordinate system
-        if force or coord_sys_changed:
-            self.add_to_outgoing_data_message(
-                simp.DataKey.PositionCoordinateSystem,
-                (self.get_coordinate_system(), 1)
-            )
 
         # Distance unit
         if force or 'cartesian_unit_att' in changed\
@@ -628,11 +587,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         vmin = (float32_to_bytes(float(self.state.size_vmin)), 1)
         vmax = (float32_to_bytes(float(self.state.size_vmax)), 1)
         return vmin, vmax
-
-    def get_coordinate_system(self) -> tuple[bytearray]:
-        return (
-            string_to_bytes(self._viewer_state.coordinate_system + simp.DELIM)
-        )
 
     def get_position_unit(self) -> tuple[bytearray]:
         self._viewer.debug('Executing get_position_unit()')

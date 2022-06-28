@@ -28,11 +28,7 @@ class Simp:
         X = 'pos.x'
         Y = 'pos.y'
         Z = 'pos.z'
-        # RA = 'pos.ra'
-        # Dec = 'pos.dec'
-        # Distance = 'pos.dist'
         PointUnit = 'pos.unit'
-        # PositionCoordinateSystem = 'pos.coordsys'
         # Velocity
         U = 'vel.u'
         V = 'vel.v'
