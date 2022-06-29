@@ -1,9 +1,6 @@
-import time
-from typing import TYPE_CHECKING, Any, Union
-from attr import s
+from typing import TYPE_CHECKING, Union
 from matplotlib.colors import to_hex, to_rgb
 from astropy.coordinates import SkyCoord
-from threading import Thread, Lock
 from astropy import units as ap_u
 
 from glue.core import Data, Subset
@@ -112,9 +109,9 @@ class OpenSpaceLayerArtist(LayerArtist):
         or self._viewer_state.z_att is None):
             return
 
-        if self._viewer_state.coordinate_system != 'Cartesian'\
-        and (self._viewer_state.lon_att is None or self._viewer_state.lat_att is None\
-        or self._viewer_state.alt_att is None):
+        if self._viewer_state.coordinate_system == 'ICRS'\
+        and (self._viewer_state.ra_att is None or self._viewer_state.dec_att is None\
+        or self._viewer_state.icrs_dist_att is None):
             return
         
         # If properties update in Glue, send message to OpenSpace with new values
@@ -240,33 +237,61 @@ class OpenSpaceLayerArtist(LayerArtist):
         '''
         self._viewer.debug(f'Executing add_points_to_outgoing_data_message()', 4)
         coord_sys_changed = 'coordinate_system' in changed
-        
 
-        has_changed_anything_in_icrs = (
-            any([attr in changed for attr in ['lon_att', 'lat_att', 'alt_att']])
-            and self._viewer_state.coordinate_system == 'ICRS'
-        )
+        # ICRS, Convert ICRS -> Cartesian
+        icrs_changed = 'ra_att' in changed or 'dec_att' in changed or 'icrs_dist_att' in changed
+        if (force or coord_sys_changed or icrs_changed) and self._viewer_state.coordinate_system == 'ICRS':
+            ra = self.state.layer[self._viewer_state.ra_att]
+            dec = self.state.layer[self._viewer_state.dec_att]
+            distance = self.state.layer[self._viewer_state.icrs_dist_att]
+            dist_unit = self._viewer_state.icrs_dist_unit_att
 
-        # TODO: ADD RA,Dec and Dist to simp
+            # Get cartesian coordinates on unit galactic sphere
+            coordinates = SkyCoord(
+                ra * ap_u.deg,
+                dec * ap_u.deg,
+                distance=distance * ap_u.Unit(dist_unit),
+                frame='icrs'
+            )
+            x, y, z = coordinates.galactic.cartesian.xyz
+            # self._viewer.debug(f'x[0]={x[0]}, y[0]={y[0]}, z[0]={z[0]}')
+            # self._viewer.debug(f'len(x)={len(x)}, len(y)={len(y)}, len(z)={len(z)}')
+            self._viewer.debug(f'Converted ICRS -> Cartesian', 2)
 
-        if force or coord_sys_changed or 'x_att' in changed or has_changed_anything_in_icrs:
             self.add_to_outgoing_data_message(
                 simp.DataKey.X,
-                self.get_float_attribute(self.state.layer[self._viewer_state.x_att])
+                self.get_float_attribute(x.value)
             )
-        if force or coord_sys_changed or 'y_att' in changed or has_changed_anything_in_icrs:
             self.add_to_outgoing_data_message(
                 simp.DataKey.Y,
-                self.get_float_attribute(self.state.layer[self._viewer_state.y_att])
+                self.get_float_attribute(y.value)
             )
-        if force or coord_sys_changed or 'z_att' in changed or has_changed_anything_in_icrs:
             self.add_to_outgoing_data_message(
                 simp.DataKey.Z,
-                self.get_float_attribute(self.state.layer[self._viewer_state.z_att])
+                self.get_float_attribute(z.value)
             )
 
-        if force or "cartesian_unit_att" in changed\
-                 or "alt_unit" in changed or coord_sys_changed:
+        # Cartesian
+        elif self._viewer_state.coordinate_system == 'Cartesian':
+            if force or coord_sys_changed or 'x_att' in changed:
+                self.add_to_outgoing_data_message(
+                    simp.DataKey.X,
+                    self.get_float_attribute(self.state.layer[self._viewer_state.x_att])
+                )
+            if force or coord_sys_changed or 'y_att' in changed:
+                self.add_to_outgoing_data_message(
+                    simp.DataKey.Y,
+                    self.get_float_attribute(self.state.layer[self._viewer_state.y_att])
+                )
+            if force or coord_sys_changed or 'z_att' in changed:
+                self.add_to_outgoing_data_message(
+                    simp.DataKey.Z,
+                    self.get_float_attribute(self.state.layer[self._viewer_state.z_att])
+                )
+
+        # Distance unit
+        if force or 'cartesian_unit_att' in changed\
+                 or 'icrs_dist_unit_att' in changed or coord_sys_changed:
             self.add_to_outgoing_data_message(simp.DataKey.PointUnit, (self.get_position_unit(), 1))
 
     def add_velocity_to_outgoing_data_message(self, *, changed: set = {}, force: bool = False):
@@ -564,54 +589,21 @@ class OpenSpaceLayerArtist(LayerArtist):
         return vmin, vmax
 
     def get_position_unit(self) -> tuple[bytearray]:
-        if self._viewer_state.coordinate_system == "Cartesian":
+        self._viewer.debug('Executing get_position_unit()')
+        if self._viewer_state.coordinate_system == 'Cartesian':
+            self._viewer.debug(f'get_position_unit(): Cartesian - {simp.dist_unit_astropy_to_simp(self._viewer_state.cartesian_unit_att)}')
             return (
                 string_to_bytes(simp.dist_unit_astropy_to_simp(
                     self._viewer_state.cartesian_unit_att 
                 ) + simp.DELIM)
             )
-        elif self._viewer_state.coordinate_system == "ICRS":
+        elif self._viewer_state.coordinate_system == 'ICRS':
+            self._viewer.debug(f'get_position_unit(): ICRS - {simp.dist_unit_astropy_to_simp(self._viewer_state.icrs_dist_unit_att)}')
             return (
                 string_to_bytes(simp.dist_unit_astropy_to_simp(
-                    self._viewer_state.alt_unit
+                    self._viewer_state.icrs_dist_unit_att
                 ) + simp.DELIM)
             )
-
-    def get_coordinates(self) -> tuple[list[bytearray], int]:
-        self._viewer.debug(f'Executing get_coordinates()', 4)
-        
-        x: list[float]
-        y: list[float]
-        z: list[float]
-        _has_updated_points = False
-
-        if self._viewer_state.coordinate_system == 'Cartesian':
-            _has_updated_points = True
-            x = self.state.layer[self._viewer_state.x_att]
-            y = self.state.layer[self._viewer_state.y_att]
-            z = self.state.layer[self._viewer_state.z_att]
-
-        elif self._viewer_state.coordinate_system == 'ICRS':
-            _has_updated_points = True
-            # Convert ICRS to cartesian coordinates
-            coordinates = SkyCoord(
-                self.state.layer[self._viewer_state.lon_att] * ap_u.deg,
-                self.state.layer[self._viewer_state.lat_att] * ap_u.deg,
-                distance=self.state.layer[self._viewer_state.alt_att] * ap_u.Unit(self._viewer_state.alt_unit),
-                frame='icrs'
-            )
-            x, y, z = coordinates.galactic.cartesian.xyz.value            
-
-        if _has_updated_points:
-            x_res = bytearray()
-            y_res = bytearray()
-            z_res = bytearray()
-            for i in range(len(x)):
-                x_res += float32_to_bytes(float(x[i]))
-                y_res += float32_to_bytes(float(y[i]))
-                z_res += float32_to_bytes(float(z[i]))
-
-            return [x_res, y_res, z_res], len(x)
 
     def get_cmap_nan_mode(self) -> tuple[bytearray, int]:
         mode = -1
@@ -667,7 +659,6 @@ class OpenSpaceLayerArtist(LayerArtist):
 
     def get_float_attribute(self, attr: np.ndarray) -> tuple[bytearray, int]:
         self._viewer.debug('Executing get_float_attribute()', 4)
-        # TODO: Unnormalize velocity if normalized?
         attr_bytes = float32_list_to_bytes(attr.tolist())
         return (attr_bytes, len(attr))
 

@@ -30,7 +30,6 @@ from .layer_state_widget import OpenSpaceLayerStateWidget
 
 __all__ = ['OpenSpaceDataViewer']
 
-
 class DebugMode(int, Enum):
     Off = 0,
     On = 1,
