@@ -175,7 +175,7 @@ class OpenSpaceDataViewer(DataViewer):
 
         self.ip_textfield = QLineEdit()
         self.ip_textfield.setText('localhost:4700')
-        self.ip_textfield.setEnabled(False)
+        self.ip_textfield.setEnabled(True)
         self.ip_textfield.setProperty('name', 'valuetext_uri')
         self.ip_textfield.setMinimumWidth(200)
         horizontal_layout.addWidget(self.ip_textfield)
@@ -611,6 +611,8 @@ class OpenSpaceDataViewer(DataViewer):
     @messagebox_on_error("Failed to add subset")
     def add_subset(self, subset) -> bool:
         # TODO: Here we should handle to divide datasets into multiple SGNs in OpenSpace
+        if len(self.layers) > 0:
+            return False
         return super(OpenSpaceDataViewer, self).add_subset(subset) # Return true if the subset should be added, false if not
 
     def remove_data(self, data):
