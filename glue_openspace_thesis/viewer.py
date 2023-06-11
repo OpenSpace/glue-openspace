@@ -61,40 +61,40 @@ class OpenSpaceDataViewer(DataViewer):
     _toolbar_cls = BasicToolbar
     tools = []
 
-    _thread_running: bool
-    _threadCommsRx: Union[Thread, None]
+    _thread_running: "bool"
+    _threadCommsRx: "Union[Thread, None]"
 
-    _outgoing_data_message: dict[str, dict[simp.DataKey, tuple[bytearray, int]]]
-    _outgoing_data_message_mutex: Lock
-    _outgoing_data_message_thread_running: bool
-    _outgoing_data_message_thread: Union[Thread, None]
-    _outgoing_data_message_condition: Condition
+    _outgoing_data_message: "dict[str, dict[simp.DataKey, tuple[bytearray, int]]]"
+    _outgoing_data_message_mutex: "Lock"
+    _outgoing_data_message_thread_running: "bool"
+    _outgoing_data_message_thread: "Union[Thread, None]"
+    _outgoing_data_message_condition: "Condition"
 
-    _is_connected: bool
-    _is_connecting: bool
-    _lost_connection: bool
+    _is_connected: "bool"
+    _is_connecting: "bool"
+    _lost_connection: "bool"
 
-    _connection_state: ConnectionState
+    _connection_state: "ConnectionState"
 
-    _failed_socket_read_retries: int
+    _failed_socket_read_retries: "int"
     
-    _socket: Union[socket.socket, None]
-    layers: list[OpenSpaceLayerArtist]
+    _socket: "Union[socket.socket, None]"
+    layers: "list[OpenSpaceLayerArtist]"
 
-    ui: QWidget
-    connection_button = QPushButton
-    ip_textfield: QLineEdit
+    ui: "QWidget"
+    connection_button = "QPushButton"
+    ip_textfield: "QLineEdit"
 
-    _log_shown: bool
-    _logs: list[str]
+    _log_shown: "bool"
+    _logs: "list[str]"
 
-    _has_resized: bool
+    _has_resized: "bool"
 
-    state: OpenSpaceViewerState
+    state: "OpenSpaceViewerState"
 
     layer_identifiers = []
 
-    _main_layer_uuid: str
+    _main_layer_uuid: "str"
 
     # @classmethod
     # @messagebox_on_error("Failed to open viewer. Another OpenSpace viewer already contains that layer.")
@@ -281,7 +281,7 @@ class OpenSpaceDataViewer(DataViewer):
         qApp.processEvents()
         return old_connection_state
 
-    def log(self, msg: str):
+    def log(self, msg: "str"):
         print(f'OpenSpace Viewer ({self._viewer_identifier}): {msg}')
 
         if not isinstance(msg, str):
@@ -293,7 +293,7 @@ class OpenSpaceDataViewer(DataViewer):
         # self.log_widget.addWidget(new_msg)
         return
 
-    def debug(self, msg: str, log_level: int = 1):
+    def debug(self, msg: "str", log_level: "int" = 1):
         """
         Set DEBUG_VERBOSICITY at the top of the file
         """
@@ -387,7 +387,7 @@ class OpenSpaceDataViewer(DataViewer):
         self._outgoing_data_message_condition.release()
         
     def start_socket_thread(self):
-        if (self._threadCommsRx == None) or (not self._threadCommsRx.is_alive()): 
+        if (self._threadCommsRx == None) or (not self._threadCommsRx.is_alive()):
             self._lost_connection = False
             self._threadCommsRx = Thread(target=self.request_listen)
             self._thread_running = True
@@ -592,7 +592,7 @@ class OpenSpaceDataViewer(DataViewer):
         return self.disconnect_from_openspace()
 
     @messagebox_on_error("Failed to add data")
-    def add_data(self, data) -> bool:
+    def add_data(self, data) -> "bool":
         # TODO: Here we can handle when new datasets are added, so we can send new data
         # This should be false, i.e one should not be able to add multiple datasets in one OpenSpace Viewer
         # This can be changed later on to add support for dataset "linking"
@@ -609,7 +609,7 @@ class OpenSpaceDataViewer(DataViewer):
         return super(OpenSpaceDataViewer, self).add_data(data)# and OpenSpaceDataViewer.check_and_add_instance(data)
 
     @messagebox_on_error("Failed to add subset")
-    def add_subset(self, subset) -> bool:
+    def add_subset(self, subset) -> "bool":
         # TODO: Here we should handle to divide datasets into multiple SGNs in OpenSpace
         if len(self.layers) > 0:
             return False

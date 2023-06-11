@@ -89,11 +89,11 @@ class Simp:
         pass
 
     class SimpError(Exception):
-        def __init__(self, message: str, *args, **kwargs):
+        def __init__(self, message: "str", *args, **kwargs):
             self.message = message
 
     @staticmethod
-    def send_simp_message(viewer: OpenSpaceDataViewer, message_type: MessageType, subjectBuffer = bytearray()):
+    def send_simp_message(viewer: "OpenSpaceDataViewer", message_type: "MessageType", subjectBuffer = bytearray()):
         length_of_subject = str(format(len(subjectBuffer), '015d')) # formats to a 15 character string
         message = bytes(str(simp.protocol_version) + message_type + length_of_subject, 'utf-8') + subjectBuffer
 
@@ -113,7 +113,7 @@ class Simp:
             viewer._lost_connection = True
         
     @staticmethod
-    def parse_message(viewer: OpenSpaceDataViewer, message: bytearray):
+    def parse_message(viewer: "OpenSpaceDataViewer", message: "bytearray"):
         header_str = message[0:24].decode('utf-8')
 
         protocol_version_in = header_str[0:5]
@@ -130,8 +130,8 @@ class Simp:
         return message_type, subject
 
     @staticmethod
-    def check_offset(message: bytearray, _offset: Union[int, list[int]]):
-        offsets: list[int]
+    def check_offset(message: "bytearray", _offset: "Union[int, list[int]]"):
+        offsets: "list[int]"
         if isinstance(_offset, list):
             offsets = _offset
         else:
@@ -145,7 +145,7 @@ class Simp:
                 raise simp.SimpError(f'Offset was {offset}, has to be >= 0')
 
     @staticmethod
-    def read_float32(message: bytearray, offset: int) -> tuple[float, int]:
+    def read_float32(message: "bytearray", offset: "int") -> "tuple[float, int]":
         simp.check_offset(message, [offset, (offset + 4)])
         byte_buffer = message[offset:(offset + 4)]
 
@@ -158,7 +158,7 @@ class Simp:
         return value, offset
 
     @staticmethod
-    def read_int32(message: bytearray, offset: int) -> tuple[int, int]:
+    def read_int32(message: "bytearray", offset: "int") -> "tuple[int, int]":
         simp.check_offset(message, [offset, (offset + 4)])
         byte_buffer = message[offset:(offset + 4)]
 
@@ -171,7 +171,7 @@ class Simp:
         return value, offset
 
     @staticmethod
-    def read_bool(message: bytearray, offset: int) -> tuple[bool, int]:
+    def read_bool(message: "bytearray", offset: "int") -> "tuple[bool, int]":
         simp.check_offset(message, [offset, (offset + 1)])
         byte_buffer = message[offset:(offset + 1)]
 
@@ -184,8 +184,8 @@ class Simp:
         return value, offset
 
     @staticmethod
-    def read_string(message: bytearray, offset: int) -> tuple[str, int]:
-        value: str = ''
+    def read_string(message: "bytearray", offset: "int") -> "tuple[str, int]":
+        value: "str" = ''
 
         delimiter_offset = message.find(simp.DELIM_BYTES, offset)
         while message.find(bytearray('\\', 'utf-8'), delimiter_offset-1, delimiter_offset) != -1:
@@ -202,7 +202,7 @@ class Simp:
         return value, offset
 
     @staticmethod
-    def print_simp_message(viewer: OpenSpaceDataViewer, message_type: MessageType, subject='', length_of_subject=-1):
+    def print_simp_message(viewer: "OpenSpaceDataViewer", message_type: "MessageType", subject='', length_of_subject=-1):
         subject_print_str = ', Subject[0:' + (length_of_subject if len(subject) < 40 else "40")
         subject_print_str += ']: ' + (subject if len(subject) < 40 else (subject[:40] + "..."))
         print_str = 'Protocol version: ' + simp.protocol_version\
@@ -211,7 +211,7 @@ class Simp:
         viewer.log(f'Sending SIMP message: ({print_str})')
 
     @staticmethod
-    def dist_unit_astropy_to_simp(astropy_unit: str) -> str:
+    def dist_unit_astropy_to_simp(astropy_unit: "str") -> "str":
         if not isinstance(astropy_unit, str):
             raise simp.SimpError(
                 f'The provided unit \'{astropy_unit}\' '\
@@ -239,7 +239,7 @@ class Simp:
             )
 
     @staticmethod
-    def time_unit_astropy_to_simp(astropy_unit: str) -> str:
+    def time_unit_astropy_to_simp(astropy_unit: "str") -> "str":
         if not isinstance(astropy_unit, str):
             raise simp.SimpError(
                 f'The provided unit \'{astropy_unit}\' '\

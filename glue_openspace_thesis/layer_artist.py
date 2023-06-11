@@ -19,18 +19,18 @@ __all__ = ['OpenSpaceLayerArtist']
 class OpenSpaceLayerArtist(LayerArtist):
     _layer_state_cls = OpenSpaceLayerState
 
-    state: OpenSpaceLayerState
-    _viewer_state: OpenSpaceViewerState
+    state: "OpenSpaceLayerState"
+    _viewer_state: "OpenSpaceViewerState"
 
     if TYPE_CHECKING:
         from .viewer import OpenSpaceDataViewer
-        _viewer: OpenSpaceDataViewer
+        _viewer: "OpenSpaceDataViewer"
 
-    _display_name: str
+    _display_name: "str"
 
-    _removed_indices: np.ndarray
+    _removed_indices: "np.ndarray"
 
-    _has_updated_points: bool
+    _has_updated_points: "bool"
 
     def __init__(self, viewer, *args, **kwargs):
         super(OpenSpaceLayerArtist, self).__init__(*args, **kwargs)
@@ -45,7 +45,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         self._has_updated_points = False
 
-    def add_to_outgoing_data_message(self, data_key: simp.DataKey, entry: tuple[bytearray, int]):
+    def add_to_outgoing_data_message(self, data_key: "simp.DataKey", entry: "tuple[bytearray, int]"):
         '''
             DANGER! You need to lock outgoing message
             mutex before calling this function
@@ -158,7 +158,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             elif self.state.size < 0.0:
                 self.state.size = 0.0
 
-    def receive_message(self, message_type: simp.MessageType, subject: bytearray, offset: int):
+    def receive_message(self, message_type: "simp.MessageType", subject: "bytearray", offset: "int"):
         self.state.will_send_message = False
 
         if message_type == simp.MessageType.Data:
@@ -167,7 +167,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         self.redraw()
         self.state.will_send_message = True
 
-    def receive_data_message(self, subject: bytearray, offset: int):
+    def receive_data_message(self, subject: "bytearray", offset: "int"):
         color = to_rgb(self.state.color)
         new_color = list(color)
         
@@ -229,7 +229,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         if new_color[0] != color[0] or new_color[1] != color[1] or new_color[2] != color[2]:
             self.state.color = to_hex(new_color, keep_alpha=False)
 
-    def add_points_to_outgoing_data_message(self, *, changed: set = {}, force: bool = False):
+    def add_points_to_outgoing_data_message(self, *, changed: "set" = {}, force: "bool" = False):
         '''
             Adds all point data to outgoing message if force is true.
             Else, check which properties has changed and add 
@@ -294,7 +294,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                  or 'icrs_dist_unit_att' in changed or coord_sys_changed:
             self.add_to_outgoing_data_message(simp.DataKey.PointUnit, (self.get_position_unit(), 1))
 
-    def add_velocity_to_outgoing_data_message(self, *, changed: set = {}, force: bool = False):
+    def add_velocity_to_outgoing_data_message(self, *, changed: "set" = {}, force: "bool" = False):
         '''
             Adds all velocity data to outgoing message if force is true.
             Else, check which properties has changed and add 
@@ -347,7 +347,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         return
 
-    def add_color_to_outgoing_data_message(self, *, changed: set = {}, force: bool = False):
+    def add_color_to_outgoing_data_message(self, *, changed: "set" = {}, force: "bool" = False):
         '''
             Adds all color data to outgoing message if force is true.
             Else, check which properties has changed and add 
@@ -405,7 +405,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             
         return
 
-    def add_size_to_outgoing_data_message(self, *, changed: set = {}, force: bool = False):
+    def add_size_to_outgoing_data_message(self, *, changed: "set" = {}, force: "bool" = False):
         '''
             Adds all size data to outgoing message if force is true.
             Else, check which properties has changed and add 
@@ -489,7 +489,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         self.send_remove_sgn()
         self.redraw()
 
-    def get_identifier_str(self) -> Union[str, None]:
+    def get_identifier_str(self) -> "Union[str, None]":
         # TODO: Dilemma!
         # Problem: This line makes send_inital_data 
         # be called on every prop change
@@ -511,7 +511,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         else:
             return
 
-    def get_color(self, color=None) -> tuple[bytearray, bytearray, bytearray, bytearray]:
+    def get_color(self, color=None) -> "tuple[bytearray, bytearray, bytearray, bytearray]":
         """
         `color` should be a list or tuple [r, g, b] or [r, g, b, a].
         If `color` isn't specified, self.state.color 
@@ -540,7 +540,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         return (r, g, b, a)
 
-    def is_enabled(self, mode: simp.DataKey) -> tuple[bytearray, int]:
+    def is_enabled(self, mode: simp.DataKey) -> "tuple[bytearray, int]":
         if mode == simp.DataKey.Visibility:
             return bool_to_bytes(bool(self.state.visible)), 1
         elif mode == simp.DataKey.VelocityEnabled:
@@ -557,11 +557,11 @@ class OpenSpaceLayerArtist(LayerArtist):
                 f'The data key \'{mode}\' can\'t be used to set enable/disable'
             )
 
-    def get_opacity(self) -> tuple[bytearray, int]:
+    def get_opacity(self) -> "tuple[bytearray, int]":
         self._viewer.debug(f'Executing get_opacity()', 4)
         return float32_to_bytes(self.state.alpha), 1
 
-    def get_gui_name_str(self) -> Union[str, None]:
+    def get_gui_name_str(self) -> "Union[str, None]":
         if isinstance(self.state.layer, Data):
             self._display_name = self.state.layer.label
         elif isinstance(self.state.layer, Subset):
@@ -570,7 +570,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             return
         
         gui_name = self._display_name
-        clean_gui_name: str = ''
+        clean_gui_name: "str" = ''
 
         # Escape all potential occurences of the separator character inside the gui name
         for i in range(len(gui_name)):
@@ -580,15 +580,15 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         return clean_gui_name
         
-    def get_size(self) -> tuple[bytearray, int]:
+    def get_size(self) -> "tuple[bytearray, int]":
         return (float32_to_bytes(float(self.state.size)), 1)
 
-    def get_linear_size_limits(self) -> tuple[tuple[bytearray, int], tuple[bytearray, int]]:
+    def get_linear_size_limits(self) -> "tuple[tuple[bytearray, int], tuple[bytearray, int]]":
         vmin = (float32_to_bytes(float(self.state.size_vmin)), 1)
         vmax = (float32_to_bytes(float(self.state.size_vmax)), 1)
         return vmin, vmax
 
-    def get_position_unit(self) -> tuple[bytearray]:
+    def get_position_unit(self) -> "tuple[bytearray]":
         self._viewer.debug('Executing get_position_unit()')
         if self._viewer_state.coordinate_system == 'Cartesian':
             self._viewer.debug(f'get_position_unit(): Cartesian - {simp.dist_unit_astropy_to_simp(self._viewer_state.cartesian_unit_att)}')
@@ -605,7 +605,7 @@ class OpenSpaceLayerArtist(LayerArtist):
                 ) + simp.DELIM)
             )
 
-    def get_cmap_nan_mode(self) -> tuple[bytearray, int]:
+    def get_cmap_nan_mode(self) -> "tuple[bytearray, int]":
         mode = -1
         if self.state.cmap_nan_mode == 'Hide':
             mode = 0
@@ -614,7 +614,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         return (int32_to_bytes(mode), 1)
 
-    def get_cmap_nan_color(self) -> tuple[bytearray, bytearray, bytearray, bytearray]:
+    def get_cmap_nan_color(self) -> "tuple[bytearray, bytearray, bytearray, bytearray]":
         return self.get_color(
             to_rgb(
                 self.state.cmap_nan_color 
@@ -623,7 +623,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             )
         )
         
-    def get_velocity_nan_mode(self) -> tuple[bytearray, int]:
+    def get_velocity_nan_mode(self) -> "tuple[bytearray, int]":
         mode = -1
         if self._viewer_state.vel_nan_mode == 'Hidden':
             mode = 0
@@ -632,7 +632,7 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         return (int32_to_bytes(mode), 1)
 
-    def get_velocity_distance_unit(self) -> tuple[bytearray, int]:
+    def get_velocity_distance_unit(self) -> "tuple[bytearray, int]":
         return (
             string_to_bytes(simp.dist_unit_astropy_to_simp(
                 self._viewer_state.vel_distance_unit_att
@@ -640,7 +640,7 @@ class OpenSpaceLayerArtist(LayerArtist):
             1
         )
 
-    def get_velocity_time_unit(self) -> tuple[bytearray, int]:
+    def get_velocity_time_unit(self) -> "tuple[bytearray, int]":
         return (
             string_to_bytes(simp.time_unit_astropy_to_simp(
                 self._viewer_state.vel_time_unit_att
@@ -648,21 +648,21 @@ class OpenSpaceLayerArtist(LayerArtist):
             1
         )
 
-    def get_velocity_day_rec(self) -> tuple[bytearray, int]:
+    def get_velocity_day_rec(self) -> "tuple[bytearray, int]":
         return (int32_to_bytes(self._viewer_state.vel_day_rec), 1)
 
-    def get_velocity_month_rec(self) -> tuple[bytearray, int]:
+    def get_velocity_month_rec(self) -> "tuple[bytearray, int]":
         return (int32_to_bytes(self._viewer_state.vel_month_rec), 1)
 
-    def get_velocity_year_rec(self) -> tuple[bytearray, int]:
+    def get_velocity_year_rec(self) -> "tuple[bytearray, int]":
         return (int32_to_bytes(self._viewer_state.vel_year_rec), 1)
 
-    def get_float_attribute(self, attr: np.ndarray) -> tuple[bytearray, int]:
+    def get_float_attribute(self, attr: np.ndarray) -> "tuple[bytearray, int]":
         self._viewer.debug('Executing get_float_attribute()', 4)
         attr_bytes = float32_list_to_bytes(attr.tolist())
         return (attr_bytes, len(attr))
 
-    def get_colormap(self) -> tuple[bytearray, bytearray, bytearray, bytearray, int]:
+    def get_colormap(self) -> "tuple[bytearray, bytearray, bytearray, bytearray, int]":
         formatted_colormap = None
         if hasattr(self.state.cmap, 'colors'):
             formatted_colormap = [[c[0], c[1], c[2], 1.0] for c in self.state.cmap.colors]
@@ -688,12 +688,12 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         return (r, g, b, a, len(formatted_colormap))
 
-    def get_colormap_limits(self) -> tuple[bytearray, bytearray]:
+    def get_colormap_limits(self) -> "tuple[bytearray, bytearray]":
         vmin = float32_to_bytes(float(self.state.cmap_vmin))
         vmax = float32_to_bytes(float(self.state.cmap_vmax))
         return (vmin, vmax)
 
-    def get_attrib_data(self, attribute) -> tuple[bytearray, int]:
+    def get_attrib_data(self, attribute) -> "tuple[bytearray, int]":
         attrib_data = self.state.layer[attribute]
 
         result = bytearray()
