@@ -48,7 +48,7 @@ class OpenSpaceViewerState(ViewerState):
     vel_year_rec = DDCProperty(2000, docstring='The year of the date when the velocity was recorded') # CallbackProperty()
     # vel_norm = CallbackProperty(docstring='Whether velocity is normalized') #, docstring='Whether or not velocity is normalized'
     # speed_att = SelectionCallbackProperty(default_index=3, docstring='The attribute to use for speed')
-    vel_nan_mode: Union[Literal['Hide'], Literal['Static']] = DDSCProperty(docstring="Which velocity NaN value mode to use", default_index=0)
+    vel_nan_mode: "Union[Literal['Hide'], Literal['Static']]" = DDSCProperty(docstring="Which velocity NaN value mode to use", default_index=0)
 
     # lum_att = SelectionCallbackProperty(docstring='The attribute to use for luminosity')
 

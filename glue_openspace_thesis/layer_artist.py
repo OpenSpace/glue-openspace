@@ -625,7 +625,7 @@ class OpenSpaceLayerArtist(LayerArtist):
         
     def get_velocity_nan_mode(self) -> "tuple[bytearray, int]":
         mode = -1
-        if self._viewer_state.vel_nan_mode == 'Hidden':
+        if self._viewer_state.vel_nan_mode == 'Hide':
             mode = 0
         elif self._viewer_state.vel_nan_mode == 'Static':
             mode = 1
