@@ -143,6 +143,7 @@ class OpenSpaceViewerState(ViewerState):
         self.update_from_dict(kwargs)
 
     def _on_layers_changed(self, *args):
+        print("Executing on layers changed from viewer state")
         with delay_callback(self, 'x_att', 'y_att', 'z_att',
                             'ra_att', 'dec_att', 'icrs_dist_att',
                             'u_att', 'v_att', 'w_att'):

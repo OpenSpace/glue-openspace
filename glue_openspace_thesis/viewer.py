@@ -34,8 +34,8 @@ class DebugMode(int, Enum):
     Off = 0,
     On = 1,
     Verbose = 2
-DEBUG = DebugMode.Off # TODO: Always set this to Off before committing!
-DEBUG_VERBOSICITY = 1
+DEBUG = DebugMode.On # TODO: Always set this to Off before committing!
+DEBUG_VERBOSICITY = 4 # TODO: there are 4 levels of debug info
 
 TEXTURE_ORIGIN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
 TEXTURE = tempfile.mktemp(suffix='.png')
@@ -252,6 +252,10 @@ class OpenSpaceDataViewer(DataViewer):
     #     self.resize_window()
 
     def set_connection_state(self, new_state: ConnectionState) -> ConnectionState:
+        """
+        Sets new connection state and returns previous state
+        """
+
         self.debug(f'Executing set_connection_state()', 4)
         old_connection_state = self._connection_state
         self._connection_state = new_state
@@ -353,6 +357,9 @@ class OpenSpaceDataViewer(DataViewer):
             # mutate the list while gathering all data to be sent
             self._outgoing_data_message_mutex.acquire()
             old_connection_state = self.set_connection_state(self.ConnectionState.SendingData)
+            
+            #print outgoing data message, TODO: remove debug.
+            self.debug(f'Outgoing data message: {self._outgoing_data_message}', 1)
 
             for layer in self.layers:
                 layer_identifier = layer.get_identifier_str()
@@ -380,6 +387,7 @@ class OpenSpaceDataViewer(DataViewer):
                 self._outgoing_data_message_mutex.release()
 
                 if len(subject_buffer):
+                    simp.print_simp_message(self, simp.MessageType.Data, layer.get_subject_prefix())
                     simp.send_simp_message(self, simp.MessageType.Data, subject_buffer)
                     self.log(f'Sent SIMP {simp.MessageType.Data} message with {n_attr_to_be_sent} attributes to OpenSpace')
                     layer.state.has_sent_initial_data = True
@@ -484,7 +492,7 @@ class OpenSpaceDataViewer(DataViewer):
 
         if message_type == simp.MessageType.Connection:
             # We only want to parse "DATA"-messages
-            self.log('Recieved non-interesting message')
+            self.log('Received non-interesting message')
             return
 
         try:
@@ -612,9 +620,10 @@ class OpenSpaceDataViewer(DataViewer):
 
     @messagebox_on_error("Failed to add subset")
     def add_subset(self, subset) -> "bool":
+        self.log(f'Adding subset {subset}')
         # TODO: Here we should handle to divide datasets into multiple SGNs in OpenSpace
-        if len(self.layers) > 0:
-            return False
+        # if len(self.layers) > 0:
+        #     return False
         return super(OpenSpaceDataViewer, self).add_subset(subset) # Return true if the subset should be added, false if not
 
     def remove_data(self, data):
@@ -637,6 +646,11 @@ class OpenSpaceDataViewer(DataViewer):
     def initialize_toolbar(self):
         # The line below will add the save icon into the viewer
         # super(OpenSpaceDataViewer, self).initialize_toolbar()
+        #c3006ae8-309d-4c0a-b6ab-76fdbb1022ca'
         return
 
         
+
+    def _update_subset(self, message):
+        print('From update_subset call', message)
+        return super()._update_subset(message)
