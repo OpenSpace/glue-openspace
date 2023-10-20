@@ -10,6 +10,7 @@ from glue.core.state_objects import StateAttributeLimitsHelper
 from glue.viewers.matplotlib.state import (DeferredDrawCallbackProperty as DDCProperty,
                                            DeferredDrawSelectionCallbackProperty as DDSCProperty)
 # from glue.config import ColormapRegistry as colormaps
+from glue.core import Subset
 
 COLOR_TYPES = ['Fixed', 'Linear']
 SIZE_TYPES = ['Fixed', 'Linear']
@@ -101,6 +102,8 @@ class OpenSpaceLayerState(LayerState):
             self.size = self.layer.style.markersize
             self._sync_markersize = keep_in_sync(self, 'size', self.layer.style, 'markersize')
 
+        
+
     # Loads the columns into the cmap attributes
     def _on_layer_change(self, layer=None):
         with delay_callback(self, 'cmap_vmin', 'cmap_vmax', 'size_vmin', 'size_vmax'):
@@ -127,3 +130,18 @@ class OpenSpaceLayerState(LayerState):
     @property
     def cmap_name(self):
         return colormaps.name_from_cmap(self.cmap)
+    
+
+    def get_data(self): 
+        if isinstance(self.layer, Subset):
+            layer = self.layer.data
+            subset_state = self.layer.subset_state
+            # data = layer.new_subset(subset_state, label='testlabel')
+        else:
+            layer = self.layer
+            subset_state = None
+            data = None
+
+        print('Data got from get_data in layer-state', layer)
+        print('Subset state from get_data in layer-state', subset_state)
+        print('Data from get_data in layer-state', data)
