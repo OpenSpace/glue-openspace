@@ -375,6 +375,8 @@ class OpenSpaceDataViewer(DataViewer):
                 
                 self._outgoing_data_message[layer_identifier].clear()
                 # Release lock, so that other threads can mutate the outgoing message
+                #TODO: (anden88 2023-10-13) this lock should be released after all messages have been sent?
+                #i.e., after the for loop over the layers.
                 self._outgoing_data_message_mutex.release()
 
                 if len(subject_buffer):

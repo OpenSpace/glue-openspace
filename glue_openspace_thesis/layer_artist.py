@@ -475,6 +475,8 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         # Clear properties that have been set on init or 
         # duplicate messages will be sent on next prop change 
+        #TODO: (anden88 2023-10-13) investigate if two prop changes actually happen. From
+        # glue side it did not seem that way, must check logs in OpenSpace.
         self.pop_changed_properties()
 
     # Create and send "Remove Scene Graph Node" message to OS
