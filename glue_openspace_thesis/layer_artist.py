@@ -45,6 +45,12 @@ class OpenSpaceLayerArtist(LayerArtist):
 
         self._has_updated_points = False
 
+        self.forceSubsetUpdate = False
+
+    def shouldSubsetUpdateData(self, value: "bool"):
+        if(isinstance(self.state.layer, Subset)):
+            self.forceSubsetUpdate = value
+
     def add_to_outgoing_data_message(self, data_key: "simp.DataKey", entry: "tuple[bytearray, int]"):
         '''
             DANGER! You need to lock outgoing message
@@ -52,7 +58,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         '''
         self._viewer.debug(f'Executing add_to_outgoing_data_message()', 4)
         identifier = self.get_identifier_str()
-        print("Identifier recieved", identifier)
         if not identifier:
             return
 
@@ -97,6 +102,12 @@ class OpenSpaceLayerArtist(LayerArtist):
         self._viewer.debug(f'Executing _on_attribute_change()', 4)
         changed = self.pop_changed_properties()
 
+        # 'changed' will be empty if the user updates the subset dataset thefore we must
+        # check if the update came from such a call
+        if(isinstance(self.state.layer, Subset)):
+            if self.forceSubsetUpdate:
+                force = True
+
         if len(changed) == 0 and not force:
             return
 
@@ -131,18 +142,20 @@ class OpenSpaceLayerArtist(LayerArtist):
                 self.is_enabled(simp.DataKey.Visibility)
             )
 
-        self.add_color_to_outgoing_data_message(changed=changed)
+        self.add_color_to_outgoing_data_message(changed=changed, force=self.forceSubsetUpdate)
 
-        self.add_size_to_outgoing_data_message(changed=changed)
+        self.add_size_to_outgoing_data_message(changed=changed, force=self.forceSubsetUpdate)
 
-        self.add_points_to_outgoing_data_message(changed=changed)
+        self.add_points_to_outgoing_data_message(changed=changed, force=self.forceSubsetUpdate)
 
-        self.add_velocity_to_outgoing_data_message(changed=changed)
+        self.add_velocity_to_outgoing_data_message(changed=changed, force=self.forceSubsetUpdate)
 
         self._viewer._outgoing_data_message_condition.notify()
 
         self._viewer._outgoing_data_message_mutex.release()
         self._viewer._outgoing_data_message_condition.release()
+
+        self.shouldSubsetUpdateData(False)
 
         self.redraw()
 
@@ -240,6 +253,8 @@ class OpenSpaceLayerArtist(LayerArtist):
         coord_sys_changed = 'coordinate_system' in changed
 
         # ICRS, Convert ICRS -> Cartesian
+        #TODO: change the following in changed calls to something like: 
+        #if (force or any(prop in changed for prop in ('ra_att', 'dec_att', '...'))
         icrs_changed = 'ra_att' in changed or 'dec_att' in changed or 'icrs_dist_att' in changed
         if (force or coord_sys_changed or icrs_changed) and self._viewer_state.coordinate_system == 'ICRS':
             ra = self.state.layer[self._viewer_state.ra_att]
@@ -275,47 +290,22 @@ class OpenSpaceLayerArtist(LayerArtist):
         # Cartesian
         elif self._viewer_state.coordinate_system == 'Cartesian':
             if force or coord_sys_changed or 'x_att' in changed:
-                print('Getting data from layer state instead')
-                self.state.get_data()
-                print("Trying to print data from x_att")
-                if isinstance(self.layer, Subset):
-                    print('Self.layer is: ', self.layer)
-                    print('layer.data', self.layer.data)
-                    self.add_to_outgoing_data_message(
-                        simp.DataKey.X,
-                        self.get_float_attribute(self.state.layer.data[self._viewer_state.x_att])
-                    )
-
-                    print('main components', self.layer.data.main_components)
-                else:
-                    print(self.layer)
-                    self.add_to_outgoing_data_message(
-                        simp.DataKey.X,
-                        self.get_float_attribute(self.state.layer[self._viewer_state.x_att])
-                    )
+                self.add_to_outgoing_data_message(
+                    simp.DataKey.X,
+                    self.get_float_attribute(self.state.layer[self._viewer_state.x_att])
+                )
 
             if force or coord_sys_changed or 'y_att' in changed:
-                if isinstance(self.layer, Subset):
-                    self.add_to_outgoing_data_message(
-                        simp.DataKey.Y,
-                        self.get_float_attribute(self.state.layer.data[self._viewer_state.y_att])
-                    )   
-                else:
-                    self.add_to_outgoing_data_message(
+                self.add_to_outgoing_data_message(
                         simp.DataKey.Y,
                         self.get_float_attribute(self.state.layer[self._viewer_state.y_att])
-                    )
+                )
+
             if force or coord_sys_changed or 'z_att' in changed:
-                if isinstance(self.layer, Subset):
-                    self.add_to_outgoing_data_message(
-                        simp.DataKey.Z,
-                        self.get_float_attribute(self.state.layer.data[self._viewer_state.z_att])
-                    )
-                else:
-                    self.add_to_outgoing_data_message(
-                        simp.DataKey.Z,
-                        self.get_float_attribute(self.state.layer[self._viewer_state.z_att])
-                    )
+                self.add_to_outgoing_data_message(
+                    simp.DataKey.Z,
+                    self.get_float_attribute(self.state.layer[self._viewer_state.z_att])
+                )
 
         # Distance unit
         if force or 'cartesian_unit_att' in changed\
@@ -469,10 +459,17 @@ class OpenSpaceLayerArtist(LayerArtist):
         return identifier + simp.DELIM + gui_name + simp.DELIM
 
     def add_initial_data_to_message(self):
+        self._viewer.debug(f'Executing add_initial_data_to_message()', 4)
+
+        # First subset update call will have temporary empty layers so we wait until
+        # subsequent update calls before sending initial data to OpenSpace
+        if(isinstance(self.state.layer, Subset)):
+            if self.state.layer is None:
+                return
+            
         self._viewer._outgoing_data_message_mutex.acquire()
         self._viewer._outgoing_data_message_condition.acquire()
 
-        self._viewer.debug(f'Executing add_initial_data_to_message()', 4)
 
         # PointData
         self.add_points_to_outgoing_data_message(force=True)
@@ -530,7 +527,6 @@ class OpenSpaceLayerArtist(LayerArtist):
         # self.state.has_sent_initial_data = False
 
         if isinstance(self.state.layer, Data):
-            print("Layer was of type DATA, called in layer artis", self.state.layer.uuid)
             # TODO: Same dataset can be connected to multiple viewers and
             # can be controlled from each. This is a bit unclear. Two options:
             # 1. A dataset can be used in multiple viewers but are treated as different datasets
@@ -539,7 +535,6 @@ class OpenSpaceLayerArtist(LayerArtist):
             self._viewer._main_layer_uuid = self.state.layer.uuid
             return self.state.layer.uuid
         elif isinstance(self.state.layer, Subset):
-            print("Layer was of type Subset, called in layer artis", "main layer uuid:", self._viewer._main_layer_uuid, "subset label:", self.state.layer.label)
             return self._viewer._main_layer_uuid + self.state.layer.label.replace('Subset ', '')
         else:
             return

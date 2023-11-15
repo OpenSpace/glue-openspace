@@ -16,14 +16,14 @@ VELOCITY_MODES = ['Static', 'Motion']
 VELOCITY_NAN_MODES = ['Hide', 'Static']
 
 #Common header names to automatically fill the viewer settings on startup.
-PX_CHOICES = ['x', 'px', 'posx', 'pos_x', 'positionx', 'position_x']
-PY_CHOICES = ['y', 'py', 'posy', 'pos_y', 'positiony', 'position_y']
-PZ_CHOICES = ['z', 'pz', 'posz', 'pos_z', 'positionz', 'position_z']
-U_CHOICES = ['u', 'vx', 'velx', 'vel_x', 'velocityx', 'velocity_x']
-V_CHOICES = ['v', 'vy', 'vely', 'vel_y', 'velocityy', 'velocity_y']
-W_CHOICES = ['w', 'vz', 'velz', 'vel_z', 'velocityz', 'velocity_z']
-RA_CHOCIES = ['ra', ]
-DEC_CHOICES = ['dec', ]
+PX_CHOICES   = ['x', 'px', 'posx', 'pos_x', 'positionx', 'position_x']
+PY_CHOICES   = ['y', 'py', 'posy', 'pos_y', 'positiony', 'position_y']
+PZ_CHOICES   = ['z', 'pz', 'posz', 'pos_z', 'positionz', 'position_z']
+U_CHOICES    = ['u', 'vx', 'velx', 'vel_x', 'velocityx', 'velocity_x']
+V_CHOICES    = ['v', 'vy', 'vely', 'vel_y', 'velocityy', 'velocity_y']
+W_CHOICES    = ['w', 'vz', 'velz', 'vel_z', 'velocityz', 'velocity_z']
+RA_CHOCIES   = ['ra']
+DEC_CHOICES  = ['dec']
 DIST_CHOICES = ['dist', 'distance', 'distpc']
 
 __all__ = ['OpenSpaceViewerState']
@@ -143,7 +143,6 @@ class OpenSpaceViewerState(ViewerState):
         self.update_from_dict(kwargs)
 
     def _on_layers_changed(self, *args):
-        print("Executing on layers changed from viewer state")
         with delay_callback(self, 'x_att', 'y_att', 'z_att',
                             'ra_att', 'dec_att', 'icrs_dist_att',
                             'u_att', 'v_att', 'w_att'):
@@ -166,8 +165,8 @@ class OpenSpaceViewerState(ViewerState):
         if(not self.layers):
             return
 
-        #Create dictionary to map helpers and corresponding header choices by a common key.
-        #Since helpers cannot be iterated over, we have to do this manually.
+        # Create dictionary to map helpers and corresponding header choices by a common
+        # key. Since helpers cannot be iterated over, we have to do this manually
         headerDict = {'px': PX_CHOICES, 'py': PY_CHOICES, 'pz': PZ_CHOICES,
                       'u': U_CHOICES, 'v': V_CHOICES, 'w': W_CHOICES,
                       'ra': RA_CHOCIES, 'dec': DEC_CHOICES, 'dist': DIST_CHOICES}
@@ -175,13 +174,14 @@ class OpenSpaceViewerState(ViewerState):
                       'u': self.u_att_helper, 'v': self.v_att_helper, 'w': self.w_att_helper,
                       'ra': self.ra_att_helper, 'dec': self.dec_att_helper, 'dist': self.icrs_dist_att_helper}
 
-        #Try to automatically set settings based on available header names in layer data,
-        #Otherwise it will use default set in __init__
+        # Try to automatically set settings based on available header names in layer data,
+        # Otherwise it will use default set in __init__
         for key, helper in helperDict.items():
             headers = headerDict[key]
-            choices = helper.choices #Available choices for this helper based on layer data.
+            # Available choices for this helper based on layer data.
+            choices = helper.choices 
             
-            #Convert to strings to iterate over
+            # Convert to strings to iterate over
             choicesAsStrings = [str(x) for x in choices]
             
             for header in headers:
@@ -189,10 +189,10 @@ class OpenSpaceViewerState(ViewerState):
                     index = choicesAsStrings.index(header)
                     helper.selection = helper.choices[index]
                     break
-                except ValueError: # header not in choices
+                except ValueError: # Header not in choices
                     continue
         
-        #We remove the callback so this only happens once per startup. 
+        # We remove the callback so this only happens once per startup. 
         self.remove_callback('layers', self.initializeVariables)
 
     def _update_priority(self, name):

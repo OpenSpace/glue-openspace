@@ -34,8 +34,8 @@ class DebugMode(int, Enum):
     Off = 0,
     On = 1,
     Verbose = 2
-DEBUG = DebugMode.On # TODO: Always set this to Off before committing!
-DEBUG_VERBOSICITY = 4 # TODO: there are 4 levels of debug info
+DEBUG = DebugMode.Off # TODO: Always set this to Off before committing!
+DEBUG_VERBOSICITY = 1 # TODO: there are 4 levels of debug info
 
 TEXTURE_ORIGIN = os.path.abspath(os.path.join(os.path.dirname(__file__), 'halo.png'))
 TEXTURE = tempfile.mktemp(suffix='.png')
@@ -358,9 +358,6 @@ class OpenSpaceDataViewer(DataViewer):
             self._outgoing_data_message_mutex.acquire()
             old_connection_state = self.set_connection_state(self.ConnectionState.SendingData)
             
-            #print outgoing data message, TODO: remove debug.
-            self.debug(f'Outgoing data message: {self._outgoing_data_message}', 1)
-
             for layer in self.layers:
                 layer_identifier = layer.get_identifier_str()
                 if not layer_identifier or not layer_identifier in self._outgoing_data_message:
@@ -376,7 +373,12 @@ class OpenSpaceDataViewer(DataViewer):
                     subject_buffer += bytearray(str(simp_key + simp.DELIM), 'utf-8')
                     n_vals_str = f'{n_vals} ' if n_vals > 1 else ''
                     self.log(f'Adding {n_vals_str}{simp_key} to outgoing message')
-                    if (n_vals > 1):
+                    # If we send one data point we still need to send the number of values
+                    # in order to read the data correctly as some DataKeys depend on it
+                    if (n_vals > 1 or simp_key in [simp.DataKey.X, simp.DataKey.Y, simp.DataKey.Z,
+                                                    simp.DataKey.U, simp.DataKey.V, simp.DataKey.W,
+                                                    simp.DataKey.ColormapAttributeData,
+                                                    simp.DataKey.LinearSizeAttributeData]):
                         subject_buffer += int32_to_bytes(n_vals) # Get 32 bits (4 bytes)
                     subject_buffer += data_buffer
                 
@@ -387,7 +389,6 @@ class OpenSpaceDataViewer(DataViewer):
                 self._outgoing_data_message_mutex.release()
 
                 if len(subject_buffer):
-                    simp.print_simp_message(self, simp.MessageType.Data, layer.get_subject_prefix())
                     simp.send_simp_message(self, simp.MessageType.Data, subject_buffer)
                     self.log(f'Sent SIMP {simp.MessageType.Data} message with {n_attr_to_be_sent} attributes to OpenSpace')
                     layer.state.has_sent_initial_data = True
@@ -620,11 +621,16 @@ class OpenSpaceDataViewer(DataViewer):
 
     @messagebox_on_error("Failed to add subset")
     def add_subset(self, subset) -> "bool":
-        self.log(f'Adding subset {subset}')
-        # TODO: Here we should handle to divide datasets into multiple SGNs in OpenSpace
-        # if len(self.layers) > 0:
-        #     return False
         return super(OpenSpaceDataViewer, self).add_subset(subset) # Return true if the subset should be added, false if not
+    
+    def _update_subset(self, message):
+        # This is done to notify that the number of data points has changes since this is
+        # not passed in the changed message 
+        if message.subset in self._layer_artist_container:
+            for layer_artist in self._layer_artist_container[message.subset]:
+                    layer_artist.shouldSubsetUpdateData(True)
+
+        return super(OpenSpaceDataViewer, self)._update_subset(message)
 
     def remove_data(self, data):
         [layer.send_remove_sgn() for layer in self.layers if layer.state.layer == data.uuid]
@@ -646,11 +652,4 @@ class OpenSpaceDataViewer(DataViewer):
     def initialize_toolbar(self):
         # The line below will add the save icon into the viewer
         # super(OpenSpaceDataViewer, self).initialize_toolbar()
-        #c3006ae8-309d-4c0a-b6ab-76fdbb1022ca'
         return
-
-        
-
-    def _update_subset(self, message):
-        print('From update_subset call', message)
-        return super()._update_subset(message)
